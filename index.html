@@ -152,12 +152,10 @@
                     var latLng = new google.maps.LatLng(coords[1], coords[0]);
                     var deviceName = geoJsonData.features[i].properties.title
 
-                    //if device has no recent activity then don't create marker. 
-                    //(TODO: maybe still show, but instead grey out marker)
-                    if (deviceName)
-
-
-                    createMarkerForDevice(latLng, deviceName,)
+                    //return the last device reading. (will only find if is in the last 100 queried)
+                    var thisDevice = isDeviceLive(deviceName, deviceData.docs);
+                    
+                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
                 } 
                 //end of for loop (that creates the markers)
 
@@ -173,7 +171,7 @@
 
         var markers = [];
 
-        function createMarkerForDevice(latLng, name) {
+        function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
 
             let content = `
                 <div class="deviceDataWindow">
@@ -206,6 +204,7 @@
             var marker = new google.maps.Marker({
                 position: latLng,
                 map: map,
+                label: lastTemp, //label on marker
                 infowindow: infowindowData
             });
 
@@ -409,6 +408,28 @@ function populateGraph(deviceName) {
     })
 
 }     
+
+function isDeviceLive(nameKey, myArray){
+    //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
+    for (var i=0; i < myArray.length; i++) {
+        if (myArray[i].device_name === nameKey) {
+            // return this if device WAS present
+            return {
+                markerColour: 'green',
+                lastTemp: myArray[i].temperature,
+                lastHum: myArray[i].humidity,
+            }
+        } else {
+            // return this if device was NOT present
+            return {
+                markerColour: 'grey',
+                lastTemp: 'offline',
+                lastHum: 'offline',
+            }
+        }
+    }
+    return 'device not found in last 100 queried'
+}
 
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
