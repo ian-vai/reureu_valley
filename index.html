@@ -200,10 +200,12 @@
                 content: content
             });
 
-            //create marker with infowindow
+            //===== CREATE MARKER with infowindow
             var marker = new google.maps.Marker({
                 position: latLng,
                 map: map,
+                // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
+                icon: pinSymbol(colour),
                 label: lastTemp, //label on marker
                 infowindow: infowindowData
             });
@@ -415,9 +417,9 @@ function isDeviceLive(nameKey, myArray){
         if (myArray[i].device_name === nameKey) {
             // return this if device WAS present
             return {
-                markerColour: 'green',
-                lastTemp: myArray[i].temperature,
-                lastHum: myArray[i].humidity,
+                markerColour: '#7CFC00',
+                lastTemp: Number(myArray[i].temperature).toFixed(1),
+                lastHum: Number(myArray[i].humidity).toFixed(1),
             }
         } else {
             // return this if device was NOT present
@@ -429,6 +431,18 @@ function isDeviceLive(nameKey, myArray){
         }
     }
     return 'device not found in last 100 queried'
+}
+
+//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
+function pinSymbol(color) {
+    return {
+        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#000',
+        strokeWeight: 1,
+        scale: 1
+    };
 }
 
     </script>
