@@ -10,6 +10,7 @@
     </style>
 </head>
 
+<!--======== HTML =================-->
 <body>
     <!-- Source: https://weatherwidget.io/ -->
     <div id="weather">
@@ -20,223 +21,253 @@
     </div>
 
     <div id="map"></div>
-    <script>
-        //create google map
-        var map;
 
-        function initMap() {
-            map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15.5,
-                center: new google.maps.LatLng(-40.081, 175.475),
-                mapTypeId: 'satellite',
-                disableDefaultUI: true
-            });
+    <img id="ioa" src="ioa.svg">
 
-            //Get device data from Cloudant, convert to geoJson
+<!--======== SCRIPTS =================-->
+<script>
+//create google map
+var map;
 
-            //Cloudant creds 
-            //user:sonespectiestrivainstrai
-            //pass:c5dfc1f500aad59873ddb67a14520fcbb24c02cf
-            //var encodedData = window.btoa('sonespectiestrivainstrai:c5dfc1f500aad59873ddb67a14520fcbb24c02cf')
-            //as base64: c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=
-            const devicesUrl =
-                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/devices/_all_docs?include_docs=true'
+function initMap() {
+    map = new google.maps.Map(document.getElementById('map'), {
+        zoom: 15.5,
+        center: new google.maps.LatLng(-40.081, 175.475),
+        mapTypeId: 'satellite',
+        disableDefaultUI: true
+    });
 
-            const optionsDevice = {
-                "method": "GET",
-                "crossDomain": true,
-                "headers": {
-                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y="
-                }
-            }
+    //Get device data from Cloudant, convert to geoJson
 
-            let geoJsonData = undefined;
+    //Cloudant creds 
+    //user:sonespectiestrivainstrai
+    //pass:c5dfc1f500aad59873ddb67a14520fcbb24c02cf
+    //var encodedData = window.btoa('sonespectiestrivainstrai:c5dfc1f500aad59873ddb67a14520fcbb24c02cf')
+    //as base64: c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=
+    const devicesUrl =
+        'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/devices/_all_docs?include_docs=true'
 
-            //DEVICES!!
-            const deviceGeoJsonPromise = new Promise((resolve) => {
-                let geojson = {};
-                geojson['type'] = 'FeatureCollection';
-                geojson['features'] = [];
+    const optionsDevice = {
+        "method": "GET",
+        "crossDomain": true,
+        "headers": {
+            "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y="
+        }
+    }
 
-                fetch(devicesUrl, optionsDevice)
-                    .then(res => res.json())
-                    .then(data => {
-                        //create geojson: //create geojson loop. source: https://gist.github.com/mapsam/7320ccb2aba0ac372050
-                        for (const device in data.rows) {
-                            const newFeature = {
-                                "type": "Feature",
-                                "geometry": {
-                                    "type": "Point",
-                                    "coordinates": [parseFloat(data.rows[device].doc.location[1]),
-                                        parseFloat(data.rows[device].doc.location[0])
-                                    ]
-                                },
-                                "properties": {
-                                    "title": data.rows[device].doc.name,
-                                    "description": data.rows[device].doc.description
-                                }
-                            }
-                            geojson['features'].push(newFeature);
+    let geoJsonData = undefined;
+
+    //DEVICES!!
+    const deviceGeoJsonPromise = new Promise((resolve) => {
+        let geojson = {};
+        geojson['type'] = 'FeatureCollection';
+        geojson['features'] = [];
+
+        fetch(devicesUrl, optionsDevice)
+            .then(res => res.json())
+            .then(data => {
+                //create geojson: //create geojson loop. source: https://gist.github.com/mapsam/7320ccb2aba0ac372050
+                for (const device in data.rows) {
+                    const newFeature = {
+                        "type": "Feature",
+                        "geometry": {
+                            "type": "Point",
+                            "coordinates": [parseFloat(data.rows[device].doc.location[1]),
+                                parseFloat(data.rows[device].doc.location[0])
+                            ]
+                        },
+                        "properties": {
+                            "title": data.rows[device].doc.name,
+                            "description": data.rows[device].doc.description
                         }
-                        resolve(geojson)
-                    })
-                    .catch(err => console.log('Error: ', err))
+                    }
+                    geojson['features'].push(newFeature);
+                }
+                resolve(geojson)
             })
+            .catch(err => console.log('Error: ', err))
+    })
 
 
 //=================*** DATA!! ***=============================
 
-            const dataUrl =
-                // 'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_all_docs?include_docs=true&descending=true&limit=1000'
-                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
-            
-            const optionsData = {
-                "method": "POST",
-                "crossDomain": true,
-                "headers": {
-                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
-                    "content-type": "application/json"
-                },
-                "body": JSON.stringify({
-                    "selector": {
-                        "created": {
-                            "$gte": 0
-                        }
-                    },
-                    "fields": [
-                        "_id",
-                        "device_physical_id",
-                        "device_name",
-                        "temperature",
-                        "humidity",
-                        "created"
-                    ],
-                    "sort": [
-                        {
-                            "created": "desc"
-                        }
-                    ],
-                    "limit": 100
-                    })
-            }
-
-
-            const deviceDataPromise = new Promise((resolve) => {
-                fetch(dataUrl, optionsData)
-                    .then(res => res.json())
-                    .then(data => {
-                        resolve(data)
-                    })
-                    .catch(err => console.log('Error: ', err))
+    const dataUrl =
+        // 'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_all_docs?include_docs=true&descending=true&limit=1000'
+        'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
+    
+    const optionsData = {
+        "method": "POST",
+        "crossDomain": true,
+        "headers": {
+            "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+            "content-type": "application/json"
+        },
+        "body": JSON.stringify({
+            "selector": {
+                "created": {
+                    "$gte": 0
+                }
+            },
+            "fields": [
+                "_id",
+                "device_physical_id",
+                "device_name",
+                "temperature",
+                "humidity",
+                "gps",
+                "created"
+            ],
+            "sort": [
+                {
+                    "created": "desc"
+                }
+            ],
+            "limit": 100
             })
-
-            deviceGeoJsonPromise.then(data => {
-                geoJsonData = data
-                return deviceDataPromise
-            }).then(deviceData => {
-                console.log("got geojson?")
-                console.log(geoJsonData)
-                console.log("got data?")
-                console.log(deviceData)
-            
-/*===========***   Currently not doing anything with deviceData.  ***
-             ***   Now getting data on marker click??!!           ***=================*/
+    }
 
 
-                //loop each device
-                // for (var i = 0; i < deviceData.docs.length; i++) {
-                for (var i = 0; i < geoJsonData.features.length; i++) {
-                    
-                    //get device latlng coordinates for marker
-                    var coords = geoJsonData.features[i].geometry.coordinates;
-                    var latLng = new google.maps.LatLng(coords[1], coords[0]);
-                    var deviceName = geoJsonData.features[i].properties.title
-
-                    //return the last device reading. (will only find if is in the last 100 queried)
-                    var thisDevice = isDeviceLive(deviceName, deviceData.docs);
-                    
-                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
-                } 
-                //end of for loop (that creates the markers)
-
+    const deviceDataPromise = new Promise((resolve) => {
+        fetch(dataUrl, optionsData)
+            .then(res => res.json())
+            .then(data => {
+                resolve(data)
             })
+            .catch(err => console.log('Error: ', err))
+    })
 
-            //Close open infowindows when map is clicked
-            map.addListener("click", function(event) {
-                closeAllInfoWindows(map);
-            });
+    deviceGeoJsonPromise.then(data => {
+        geoJsonData = data
+        return deviceDataPromise
+    }).then(deviceData => {
+        console.log("got geojson?")
+        console.log(geoJsonData)
+        console.log("got data?")
+        console.log(deviceData)
+    
+/*===========***   got 100 last data packets in 'deviceData'.  ***
+But not really using at this point. Currently getting data on marker click??!!  ***=================*/
 
+        //take data from 100 most recent records on the database
+        //and put them into an object of live devices and their temp/hum readings
+        const liveDevices = deviceData.docs.reduce((recentDevices, device) => {
+            recentDevices[device.device_name] = recentDevices[device.device_name] || []
+            recentDevices[device.device_name].push({
+                created: device.created,
+                temp: device.temperature,
+                hum: device.humidity,
+                location: device.gps
+            })
+            return recentDevices
+        }, {})
+        console.log('whats live?')
+        console.log(liveDevices)
 
-        } //-------- End initMap()
-
-        var markers = [];
-
-        function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
-
-            let content = `
-                <div class="deviceDataWindow">
-                        <div class="deviceDataLabel" id="tempLabel">Temperature</div>
-                        <div class="deviceDataReading" id="tempValue"><sup>°C</sup></div>
-
-                        <div class="deviceDataLabel" id="humLabel">Humidity</div>
-                        <div class="deviceDataReading" id="humValue"><sup>%</sup></div>
-
-                        <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-                        <div class="deviceDataValue" id="deviceValue"></div>
-
-                        <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-                        <div class="deviceDataValue" id="timeValue"></div>
-
-                        <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
-                        <div class="graph deviceDataLabel" id="tempGraph"></div>
-
-                        <div class="deviceDataLabel" id="humHistoryLabel">Hum History</div>
-                        <div class="graph deviceDataLabel" id="humGraph"></div>
-                </div>
-            `
-            
-            //create infowindow
-            var infowindowData = new google.maps.InfoWindow({
-                content: content
-            });
-
-            //===== CREATE MARKER with infowindow
-            var marker = new google.maps.Marker({
-                position: latLng,
-                map: map,
-                // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
-                icon: pinSymbol(colour),
-                label: lastTemp, //label on marker
-                infowindow: infowindowData
-            });
-
-            markers.push(marker);
-
-            //add infoWindow Event
-            marker.addListener('click', function () {
-                //hide open info windows
-                closeAllInfoWindows(map);
-                //open new infowindow
-                this.infowindow.open(map, marker);
-
-                //add marker click event (zoom, and pan)
-                map.setZoom(17);
-                map.setCenter(marker.getPosition());
-                map.panBy(0, -200);
-
-                //update device data
-                
-                populateGraph(name)
-            });
-
-        } //end createMarkerForDevice()
-
-        // Hide all markers function
-        function closeAllInfoWindows(map) {
-            markers.forEach(function(marker) {
-                marker.infowindow.close(map, marker);
-            }); 
+        //CREATE MARKERS - Using liveDevices - (ie. only live devices, in the most recent 100 data packets)
+        /*
+        console.log('loop markers')
+        for (const device in liveDevices) {
+            // console.log(liveDevices[device][0].location)
+            createMarkerForDevice(liveDevices[device][0].location, device, liveDevices[device][0].temp, liveDevices[device][0].hum)
         }
+        */
+
+        //CREATE MARKERS - Using geoJson - (ie. All devices in DB)
+        //loop each device
+        for (var i = 0; i < geoJsonData.features.length; i++) {
+            //get device latlng coordinates for marker
+            var coords = geoJsonData.features[i].geometry.coordinates;
+            var latLng = new google.maps.LatLng(coords[1], coords[0]);
+            var deviceName = geoJsonData.features[i].properties.title
+            //return the last device reading. (will only find if is in the last 100 queried)
+            var thisDevice = isDeviceLive(deviceName, deviceData.docs);
+            //function that creates each marker
+            createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
+        } 
+        //end of for loop (that creates the markers)
+    })
+
+    //Close open infowindows when map is clicked
+    map.addListener("click", function(event) {
+        closeAllInfoWindows(map);
+    });
+
+
+} //-------- End initMap()
+
+var markers = [];
+
+function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
+
+    let content = `
+        <div class="deviceDataWindow">
+                <div class="deviceDataLabel" id="tempLabel">Temperature</div>
+                <div class="deviceDataReading" id="tempValue"><sup>°C</sup></div>
+
+                <div class="deviceDataLabel" id="humLabel">Humidity</div>
+                <div class="deviceDataReading" id="humValue"><sup>%</sup></div>
+
+                <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+                <div class="deviceDataValue" id="deviceValue"></div>
+
+                <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+                <div class="deviceDataValue" id="timeValue"></div>
+
+                <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
+                <div class="graph deviceDataLabel" id="tempGraph"></div>
+
+                <div class="deviceDataLabel" id="humHistoryLabel">Hum History</div>
+                <div class="graph deviceDataLabel" id="humGraph"></div>
+        </div>
+    `
+    
+    //create infowindow
+    var infowindowData = new google.maps.InfoWindow({
+        content: content
+    });
+
+    //sort that latlng
+    //this is only used to create markers with liveDevices (not the geojson way)
+    // const latLng = new google.maps.LatLng(gps[0], gps[1]); 
+
+    //===== CREATE MARKER with infowindow
+    var marker = new google.maps.Marker({
+        position: latLng,
+        map: map,
+        // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
+        icon: pinSymbol(colour),
+        label: lastTemp, //label on marker
+        infowindow: infowindowData
+    });
+
+    markers.push(marker);
+
+    //add infoWindow Event
+    marker.addListener('click', function () {
+        //close any open info windows
+        closeAllInfoWindows(map);
+        //open new infowindow
+        this.infowindow.open(map, marker);
+
+        //add marker click event (zoom, and pan)
+        map.setZoom(17);
+        map.setCenter(marker.getPosition());
+        //offset marker to make room for tall infowindow
+        map.panBy(0, -200);
+
+        //update device data
+        
+        populateGraph(name)
+    });
+
+} //end createMarkerForDevice()
+
+// Hide all markers function
+function closeAllInfoWindows(map) {
+    markers.forEach(function(marker) {
+        marker.infowindow.close(map, marker);
+    }); 
+}
 
 function populateGraph(deviceName) {
 
@@ -411,6 +442,20 @@ function populateGraph(deviceName) {
 
 }     
 
+
+
+//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
+function pinSymbol(color) {
+    return {
+        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#000',
+        strokeWeight: 1,
+        scale: 1
+    };
+}
+
 function isDeviceLive(nameKey, myArray){
     //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
     for (var i=0; i < myArray.length; i++) {
@@ -433,21 +478,11 @@ function isDeviceLive(nameKey, myArray){
     return 'device not found in last 100 queried'
 }
 
-//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
-function pinSymbol(color) {
-    return {
-        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: '#000',
-        strokeWeight: 1,
-        scale: 1
-    };
-}
-
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
     </script>
 </body>
+
+
 
 </html>
