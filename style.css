@@ -18,7 +18,43 @@ body {
     left: 0;
     margin: 20px;
     width: 400px;
-    z-index: 9;
+    z-index: 2;
+}
+
+#computedTempHum {
+    position: fixed;
+    top: 40%;
+    left: 0;
+    margin: 20px;
+    width: 300px;
+    z-index: 2;
+    /* border: 2px solid yellow; */
+}
+
+.computedLabel, .computedValues {
+    color: white;
+    font-family: arial;
+    font-size: 0.8em;
+    margin: 10px
+}
+
+.computedValuesBox {
+    display: flex;
+    /* width: 340px; */
+}
+.computedIcons {
+    width: 50px;
+    /* border: 2px solid yellow; */
+}
+.computedIcons img {
+    width: 40px
+}
+
+.computedValues {
+    font-size: 1.5em;
+    width: 100px;
+    /* margin-right: 50px; */
+    /* border: 2px solid yellow; */
 }
 
 #ioa {
@@ -42,8 +78,10 @@ body {
         "tempLabel humLabel"
         "tempValue humValue"
         "tempHistoryLabel humHistoryLabel"
-        "tempGraph humGraph"
+        "tempGraph humGraph";
+    z-index: 99;
 }
+
 
 #tempLabel{grid-area: tempLabel; margin-top: 30px}
 #tempValue{grid-area: tempValue; margin-bottom: 20px}

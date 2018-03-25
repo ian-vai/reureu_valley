@@ -20,9 +20,50 @@
             </script>
     </div>
 
+    <div id="computedTempHum">
+        <div class="computedLabel">Real-time Median</div>
+        <div class="computedValuesBox">
+            <table>
+                <tr>
+                    <td class="computedIcons">
+                        <div><img src="./assets/thermometer.png"></div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="medianTempValue"></div>
+                    </td>
+                    <td class="computedIcons">
+                        <div ><img src="./assets/humidity.png"></div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="medianHumValue"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="computedLabel">Real-time Average</div>
+        <div class="computedValuesBox">
+                <table>
+                    <tr>
+                        <td class="computedIcons">
+                            <div><img src="./assets/thermometer.png"></div>
+                        </td>
+                        <td class="computedValues">
+                            <div id="averageTempValue"></div>
+                        </td>
+                        <td class="computedIcons">
+                            <div ><img src="./assets/humidity.png"></div>
+                        </td>
+                        <td class="computedValues">
+                            <div id="averageHumValue"></div>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+    </div>
+
     <div id="map"></div>
 
-    <img id="ioa" src="ioa.svg">
+    <img id="ioa" src="./assets/ioa.svg">
 
 <!--======== SCRIPTS =================-->
 <script>
@@ -37,8 +78,13 @@ function initMap() {
         disableDefaultUI: true
     });
 
-    //Get device data from Cloudant, convert to geoJson
+    //KML TEST
+    // var paddockKML = new google.maps.KmlLayer({
+    //       url: 'http://ioa.co.nz/img/paddocks.kml',
+    //       map: map
+    // });
 
+    //Get device data from Cloudant, convert to geoJson
     //Cloudant creds 
     //user:sonespectiestrivainstrai
     //pass:c5dfc1f500aad59873ddb67a14520fcbb24c02cf
@@ -146,7 +192,7 @@ function initMap() {
         console.log(deviceData)
     
 /*===========***   got 100 last data packets in 'deviceData'.  ***
-But not really using at this point. Currently getting data on marker click??!!  ***=================*/
+Not used for markers. Currently getting data on marker click??!!  ***=================*/
 
         //take data from 100 most recent records on the database
         //and put them into an object of live devices and their temp/hum readings
@@ -162,6 +208,17 @@ But not really using at this point. Currently getting data on marker click??!!  
         }, {})
         console.log('whats live?')
         console.log(liveDevices)
+
+        //get the average
+        //get the median
+        //of recent devices
+        const computedTempHum = computeRecentDevices(liveDevices)
+        console.log(computedTempHum)
+        //insert computed averages and median into dashboard
+        document.querySelector('#medianTempValue').innerHTML = computedTempHum.medianTemp + ' <sup>°C</sup>';
+        document.querySelector('#averageTempValue').innerHTML = computedTempHum.averageTemp + ' <sup>°C</sup>';
+        document.querySelector('#medianHumValue').innerHTML = computedTempHum.medianHum + ' <sup>%</sup>';
+        document.querySelector('#averageHumValue').innerHTML = computedTempHum.averageHum + ' <sup>%</sup>';
 
         //CREATE MARKERS - Using liveDevices - (ie. only live devices, in the most recent 100 data packets)
         /*
@@ -195,8 +252,71 @@ But not really using at this point. Currently getting data on marker click??!!  
 
 } //-------- End initMap()
 
-var markers = [];
+function computeRecentDevices(recentDevices) {
+    recentTemps = []
+    recentHums = []
 
+    //loop data for latest device readings
+    for (const eachDevice in recentDevices) {
+        recentTemps.push(Number(recentDevices[eachDevice][0].temp))
+        recentHums.push(Number(recentDevices[eachDevice][0].hum))
+    }
+
+    //average for most recent Temperature readings
+    let sum = recentTemps.reduce((previous, current) => current += previous);
+    let avgTemps = sum / recentTemps.length;
+    console.log('average temperature is: ', avgTemps)
+
+    //average for most recent Humidity readings
+    sum = recentHums.reduce((previous, current) => current += previous);
+    let avgHums = sum / recentHums.length;
+    console.log('average hum:')
+    console.log(avgHums)
+
+    //median for most recent Temperature readings
+    recentTemps.sort((a, b) => a - b);
+    let lowMiddle = Math.floor((recentTemps.length - 1) / 2);
+    let highMiddle = Math.ceil((recentTemps.length - 1) / 2);
+    let medianTemps = (recentTemps[lowMiddle] + recentTemps[highMiddle]) / 2;
+
+    //median for most recent Temperature readings
+    recentHums.sort((a, b) => a - b);
+    lowMiddle = Math.floor((recentHums.length - 1) / 2);
+    highMiddle = Math.ceil((recentHums.length - 1) / 2);
+    let medianHums = (recentHums[lowMiddle] + recentHums[highMiddle]) / 2;
+
+    //return object to computedTempHum = {}
+    return {
+        averageTemp: avgTemps.toFixed(1),
+        medianTemp: medianTemps,
+        averageHum: avgHums.toFixed(1),
+        medianHum: medianHums,
+    }
+}
+
+function isDeviceLive(nameKey, myArray){
+    //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
+    for (var i=0; i < myArray.length; i++) {
+        if (myArray[i].device_name === nameKey) {
+            // return this if device WAS present
+            return {
+                markerColour: '#7CFC00',
+                lastTemp: Number(myArray[i].temperature).toFixed(1),
+                lastHum: Number(myArray[i].humidity).toFixed(1),
+            }
+        } else {
+            // return this if device was NOT present
+            return {
+                markerColour: 'grey',
+                lastTemp: 'offline',
+                lastHum: 'offline',
+            }
+        }
+    }
+    return 'device not found in last 100 queried'
+}
+
+var markers = [];
 function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
 
     let content = `
@@ -236,7 +356,10 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
         map: map,
         // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
         icon: pinSymbol(colour),
-        label: lastTemp, //label on marker
+        label: {
+            text: lastTemp, //label on marker
+            color: colour,
+        },
         infowindow: infowindowData
     });
 
@@ -261,6 +384,18 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
     });
 
 } //end createMarkerForDevice()
+
+//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
+function pinSymbol(color) {
+    return {
+        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+        fillColor: color,
+        fillOpacity: 1,
+        strokeColor: '#000',
+        strokeWeight: 1,
+        scale: 1
+    };
+}
 
 // Hide all markers function
 function closeAllInfoWindows(map) {
@@ -441,42 +576,6 @@ function populateGraph(deviceName) {
     })
 
 }     
-
-
-
-//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
-function pinSymbol(color) {
-    return {
-        path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
-        fillColor: color,
-        fillOpacity: 1,
-        strokeColor: '#000',
-        strokeWeight: 1,
-        scale: 1
-    };
-}
-
-function isDeviceLive(nameKey, myArray){
-    //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
-    for (var i=0; i < myArray.length; i++) {
-        if (myArray[i].device_name === nameKey) {
-            // return this if device WAS present
-            return {
-                markerColour: '#7CFC00',
-                lastTemp: Number(myArray[i].temperature).toFixed(1),
-                lastHum: Number(myArray[i].humidity).toFixed(1),
-            }
-        } else {
-            // return this if device was NOT present
-            return {
-                markerColour: 'grey',
-                lastTemp: 'offline',
-                lastHum: 'offline',
-            }
-        }
-    }
-    return 'device not found in last 100 queried'
-}
 
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
