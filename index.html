@@ -94,7 +94,13 @@
 //create google map
 var map;
 
+//update dashboard every 5mins
+window.setInterval(initMap, 300000)
+
 function initMap() {
+    let now = new Date().toString()
+    console.log('interface updated @: ' + now)
+
     map = new google.maps.Map(document.getElementById('map'), {
         zoom: 15.5,
         center: new google.maps.LatLng(-40.081, 175.475),
