@@ -4,6 +4,11 @@
 <head>
     <!-- Plotly graph library -->
     <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- For Pubnub spline -->
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.19.0.js"></script>
+    <script type="text/javascript" src="http://pubnub.github.io/eon/v/eon/1.0.0/eon.js"></script>
+    <link type="text/css" rel="stylesheet" href="http://pubnub.github.io/eon/v/eon/1.0.0/eon.css" />
+    <!-- Stylesheets -->
     <link rel="stylesheet" href="style.css">
     <style>
 
@@ -63,6 +68,25 @@
 
     <div id="map"></div>
 
+    <div class="slideInDiv">
+        <div id="slideInInner">
+                    <div class="flexContainer">
+                        <div class="flexRight">
+                            <p class="splineTitles">Temperature (°C)</p>
+                            <div id="temperature-spline"></div>
+                        </div>
+                        <div class="flexLeft">
+                            <p class="splineTitles">Humidty (%)</p>
+                            <div id="humidity-spline"></div>
+                        </div>
+                    </div>
+        </div>
+    </div>
+
+    <div id="splineButtonDiv">
+        <button id="splineButton">SHOW HISTORY</button>
+    </div>
+
     <img id="ioa" src="./assets/ioa.svg">
 
 <!--======== SCRIPTS =================-->
@@ -85,11 +109,6 @@ function initMap() {
     // });
 
     //Get device data from Cloudant, convert to geoJson
-    //Cloudant creds 
-    //user:sonespectiestrivainstrai
-    //pass:c5dfc1f500aad59873ddb67a14520fcbb24c02cf
-    //var encodedData = window.btoa('sonespectiestrivainstrai:c5dfc1f500aad59873ddb67a14520fcbb24c02cf')
-    //as base64: c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=
     const devicesUrl =
         'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/devices/_all_docs?include_docs=true'
 
@@ -381,6 +400,7 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
         //update device data
         
         populateGraph(name)
+
     });
 
 } //end createMarkerForDevice()
@@ -575,7 +595,51 @@ function populateGraph(deviceName) {
             .catch(err => console.log('Error: ', err))
     })
 
-}     
+}
+
+//================ Button toggle slide in spline
+//clicking the 'show history button' adds the .slideOpen class to the body.
+document.querySelector('#splineButton').addEventListener('click', function() {
+    const el = document.getElementsByTagName('body')[0]
+    console.log(el)
+    el.classList.toggle("slideOpen");
+})
+
+//================ PubNub Spline Chart =================
+pubnub = new PubNub({
+            publishKey: 'pub-c-21bada81-7471-4558-9011-086d008008c7',
+            subscribeKey: 'sub-c-80bc6878-de51-11e7-b4b6-6a46027b7961'
+        })
+
+ eon.chart({
+            pubnub: pubnub,
+            channels: ['node-red-temperature'],
+            limit: 20,
+            generate: {
+                bindto: '#temperature-spline',
+                data: {
+                    labels: true
+                },
+                size: {
+                   height: 230
+                },
+            }
+        });
+
+        eon.chart({
+            pubnub: pubnub,
+            channels: ['node-red-humidity'],
+            limit: 20,
+            generate: {
+                bindto: '#humidity-spline',
+                data: {
+                    labels: true
+                },
+                size: {
+                   height: 230,
+                },
+            }
+        });     
 
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
