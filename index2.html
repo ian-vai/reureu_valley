@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Plotly graph library -->
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <!-- For Pubnub spline -->
+    <script src="https://cdn.pubnub.com/sdk/javascript/pubnub.4.19.0.js"></script>
+    <script type="text/javascript" src="http://pubnub.github.io/eon/v/eon/1.0.0/eon.js"></script>
+    <link type="text/css" rel="stylesheet" href="http://pubnub.github.io/eon/v/eon/1.0.0/eon.css" />
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="style.css">
+    <style>
+    </style>
+</head>
+
+<!--======== HTML =================-->
+
+<body>
+    <!-- Source: https://weatherwidget.io/ -->
+    <div id="weather">
+        <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER"
+            data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
+        <script>
+            !function (d, s, id) {
+                var js, fjs = d.getElementsByTagName(s)[0];
+                if (!d.getElementById(id)) {
+                    js = d.createElement(s);
+                    js.id = id;
+                    js.src = 'https://weatherwidget.io/js/widget.min.js';
+                    fjs.parentNode.insertBefore(js, fjs);
+                }
+            }
+                (document, 'script', 'weatherwidget-io-js');
+        </script>
+    </div>
+
+    <div id="computedTempHum">
+        <div class="computedLabel">Real-time Median</div>
+        <div class="computedValuesBox">
+            <table>
+                <tr>
+                    <td class="computedIcons">
+                        <div>
+                            <img src="./assets/thermometer.png">
+                        </div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="medianTempValue"></div>
+                    </td>
+                    <td class="computedIcons">
+                        <div>
+                            <img src="./assets/humidity.png">
+                        </div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="medianHumValue"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <div class="computedLabel">Real-time Average</div>
+        <div class="computedValuesBox">
+            <table>
+                <tr>
+                    <td class="computedIcons">
+                        <div>
+                            <img src="./assets/thermometer.png">
+                        </div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="averageTempValue"></div>
+                    </td>
+                    <td class="computedIcons">
+                        <div>
+                            <img src="./assets/humidity.png">
+                        </div>
+                    </td>
+                    <td class="computedValues">
+                        <div id="averageHumValue"></div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+
+    <div id="map"></div>
+
+    <div class="slideInDiv">
+        <div class="icons">
+            <img src="./assets/thermometer.png" width="40" />
+            <img src="./assets/humidity.png" width="40" />
+            <img src="./assets/tap.svg" width="40" />
+            
+        </div>
+        <div id="slideInInner">
+            <div class="flexContainer">
+
+                <!-- new graph: TODO: that shows history -->
+
+                <!-- heatmap test -->
+                <!-- <div class="graph" id="heatGraph"></div> -->
+
+	                <div class="flexRight">
+	                    <p class="splineTitles">Temperature (&deg;C)</p>
+	                    <div id="temperature-spline"></div>
+	                </div>
+	                <div class="flexLeft">
+	                    <p class="splineTitles">Humidty (%)</p>
+	                    <div id="humidity-spline"></div>
+	                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="splineButtonDiv">
+        <button id="splineButton">SHOW HISTORY</button>
+    </div>
+
+    <img id="ioa" src="./assets/ioa.svg">
+
+    <!--======== SCRIPTS =================-->
+    <script>
+        //create google map
+        var map;
+
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                zoom: 15.5,
+                center: new google.maps.LatLng(-40.081, 175.475),
+                mapTypeId: 'satellite',
+                disableDefaultUI: true
+            });
+
+            //KML TEST
+            // var paddockKML = new google.maps.KmlLayer({
+            //       url: 'http://ioa.co.nz/img/paddocks.kml',
+            //       map: map
+            // });
+
+            //Get device data from Cloudant, convert to geoJson
+            const devicesUrl =
+                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/devices/_all_docs?include_docs=true'
+
+            const optionsDevice = {
+                "method": "GET",
+                "crossDomain": true,
+                "headers": {
+                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y="
+                }
+            }
+
+            let geoJsonData = undefined;
+
+            //DEVICES!!
+            const deviceGeoJsonPromise = new Promise((resolve) => {
+                let geojson = {};
+                geojson['type'] = 'FeatureCollection';
+                geojson['features'] = [];
+
+                fetch(devicesUrl, optionsDevice)
+                    .then(res => res.json())
+                    .then(data => {
+                        //create geojson: //create geojson loop. source: https://gist.github.com/mapsam/7320ccb2aba0ac372050
+                        for (const device in data.rows) {
+                            const newFeature = {
+                                "type": "Feature",
+                                "geometry": {
+                                    "type": "Point",
+                                    "coordinates": [parseFloat(data.rows[device].doc.location[1]),
+                                    parseFloat(data.rows[device].doc.location[0])
+                                    ]
+                                },
+                                "properties": {
+                                    "title": data.rows[device].doc.name,
+                                    "description": data.rows[device].doc.description
+                                }
+                            }
+                            geojson['features'].push(newFeature);
+                        }
+                        resolve(geojson)
+                    })
+                    .catch(err => console.log('Error: ', err))
+            })
+
+
+            //=================*** DATA!! ***=============================
+
+            const dataUrl =
+                // 'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_all_docs?include_docs=true&descending=true&limit=1000'
+                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
+
+            const optionsData = {
+                "method": "POST",
+                "crossDomain": true,
+                "headers": {
+                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "content-type": "application/json"
+                },
+                "body": JSON.stringify({
+                    "selector": {
+                        "created": {
+                            "$gte": 0
+                        }
+                    },
+                    "fields": [
+                        "_id",
+                        "device_physical_id",
+                        "device_name",
+                        "temperature",
+                        "humidity",
+                        "gps",
+                        "created"
+                    ],
+                    "sort": [
+                        {
+                            "created": "desc"
+                        }
+                    ],
+                    "limit": 100
+                })
+            }
+
+
+            const deviceDataPromise = new Promise((resolve) => {
+                fetch(dataUrl, optionsData)
+                    .then(res => res.json())
+                    .then(data => {
+                        resolve(data)
+                    })
+                    .catch(err => console.log('Error: ', err))
+            })
+
+            deviceGeoJsonPromise.then(data => {
+                geoJsonData = data
+                return deviceDataPromise
+            }).then(deviceData => {
+                console.log("got geojson?")
+                console.log(geoJsonData)
+                console.log("got data?")
+                console.log(deviceData)
+
+                /*===========***   got 100 last data packets in 'deviceData'.  ***
+                Not used for markers. Currently getting data on marker click??!!  ***=================*/
+
+                //take data from 100 most recent records on the database
+                //and put them into an object of live devices and their temp/hum readings
+                const liveDevices = deviceData.docs.reduce((recentDevices, device) => {
+                    recentDevices[device.device_name] = recentDevices[device.device_name] || []
+                    recentDevices[device.device_name].push({
+                        created: device.created,
+                        temp: device.temperature,
+                        hum: device.humidity,
+                        //TODO: flow: device.flow (when adding new devices) will also need to be brought through the Fetch (optionsData))
+                        location: device.gps
+                    })
+                    return recentDevices
+                }, {})
+                console.log('whats live?')
+                console.log(liveDevices)
+
+                //get the average
+                //get the median
+                //of recent devices
+                const computedTempHum = computeRecentDevices(liveDevices)
+                console.log(computedTempHum)
+                //insert computed averages and median into dashboard
+                document.querySelector('#medianTempValue').innerHTML = computedTempHum.medianTemp + ' <sup>&deg;C</sup>';
+                document.querySelector('#averageTempValue').innerHTML = computedTempHum.averageTemp + ' <sup>&deg;C</sup>';
+                document.querySelector('#medianHumValue').innerHTML = computedTempHum.medianHum + ' <sup>%</sup>';
+                document.querySelector('#averageHumValue').innerHTML = computedTempHum.averageHum + ' <sup>%</sup>';
+
+                //CREATE MARKERS - Using liveDevices - (ie. only live devices, in the most recent 100 data packets)
+                /*
+                console.log('loop markers')
+                for (const device in liveDevices) {
+                    // console.log(liveDevices[device][0].location)
+                    createMarkerForDevice(liveDevices[device][0].location, device, liveDevices[device][0].temp, liveDevices[device][0].hum)
+                }
+                */
+
+                //CREATE MARKERS - Using geoJson - (ie. All devices in DB)
+                //loop each device
+                for (var i = 0; i < geoJsonData.features.length; i++) {
+                    //get device latlng coordinates for marker
+                    var coords = geoJsonData.features[i].geometry.coordinates;
+                    var latLng = new google.maps.LatLng(coords[1], coords[0]);
+                    var deviceName = geoJsonData.features[i].properties.title
+                    //return the last device reading. (will only find if is in the last 100 queried)
+                    var thisDevice = isDeviceLive(deviceName, deviceData.docs);
+                    //function that creates each marker
+                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
+                }
+                //end of for loop (that creates the markers)
+            })
+
+            //Close open infowindows when map is clicked
+            map.addListener("click", function (event) {
+                closeAllInfoWindows(map);
+            });
+
+
+        } //-------- End initMap()
+
+        function computeRecentDevices(recentDevices) {
+            recentTemps = []
+            recentHums = []
+
+            //loop data for latest device readings
+            for (const eachDevice in recentDevices) {
+                recentTemps.push(Number(recentDevices[eachDevice][0].temp))
+                recentHums.push(Number(recentDevices[eachDevice][0].hum))
+            }
+
+            //average for most recent Temperature readings
+            let sum = recentTemps.reduce((previous, current) => current += previous);
+            let avgTemps = sum / recentTemps.length;
+            console.log('average temperature is: ', avgTemps)
+
+            //average for most recent Humidity readings
+            sum = recentHums.reduce((previous, current) => current += previous);
+            let avgHums = sum / recentHums.length;
+            console.log('average hum:')
+            console.log(avgHums)
+
+            //median for most recent Temperature readings
+            recentTemps.sort((a, b) => a - b);
+            let lowMiddle = Math.floor((recentTemps.length - 1) / 2);
+            let highMiddle = Math.ceil((recentTemps.length - 1) / 2);
+            let medianTemps = (recentTemps[lowMiddle] + recentTemps[highMiddle]) / 2;
+
+            //median for most recent Temperature readings
+            recentHums.sort((a, b) => a - b);
+            lowMiddle = Math.floor((recentHums.length - 1) / 2);
+            highMiddle = Math.ceil((recentHums.length - 1) / 2);
+            let medianHums = (recentHums[lowMiddle] + recentHums[highMiddle]) / 2;
+
+            //return object to computedTempHum = {}
+            return {
+                averageTemp: avgTemps.toFixed(1),
+                medianTemp: medianTemps,
+                averageHum: avgHums.toFixed(1),
+                medianHum: medianHums,
+            }
+        }
+
+        function isDeviceLive(nameKey, myArray) {
+            console.log("my array (device docs)")
+            console.log(myArray)
+            //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
+            for (var i = 0; i < myArray.length; i++) {
+                if (myArray[i].device_name === nameKey) {
+                    // return this if device WAS present
+                    return {
+                        markerColour: '#7CFC00',
+                        lastTemp: Number(myArray[i].temperature).toFixed(1),
+                        lastHum: Number(myArray[i].humidity).toFixed(1),
+                    }
+                }
+            }
+            return {
+                markerColour: 'grey',
+                lastTemp: 'offline',
+                lastHum: 'offline',
+            }
+        }
+
+        var markers = [];
+        function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
+
+            let content = `
+        <div class="deviceDataWindow">
+                <div class="deviceDataLabel" id="tempLabel">Temperature</div>
+                <div class="deviceDataReading" id="tempValue"><sup>&deg;C</sup></div>
+
+                <div class="deviceDataLabel" id="humLabel">Humidity</div>
+                <div class="deviceDataReading" id="humValue"><sup>%</sup></div>
+
+                <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+                <div class="deviceDataValue" id="deviceValue"></div>
+
+                <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+                <div class="deviceDataValue" id="timeValue"></div>
+
+                <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
+                <div class="graph deviceDataLabel" id="tempGraph"></div>
+
+                <div class="deviceDataLabel" id="humHistoryLabel">Hum History</div>
+                <div class="graph deviceDataLabel" id="humGraph"></div>
+        </div>
+    `
+
+            //create infowindow
+            var infowindowData = new google.maps.InfoWindow({
+                content: content
+            });
+
+            //sort that latlng
+            //this is only used to create markers with liveDevices (not the geojson way)
+            // const latLng = new google.maps.LatLng(gps[0], gps[1]); 
+
+            //===== CREATE MARKER with infowindow
+            var marker = new google.maps.Marker({
+                position: latLng,
+                map: map,
+                // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
+                icon: pinSymbol(colour),
+                label: {
+                    text: lastTemp, //label on marker
+                    color: colour,
+                },
+                infowindow: infowindowData
+            });
+
+            markers.push(marker);
+
+            //add infoWindow Event
+            marker.addListener('click', function () {
+                //close any open info windows
+                closeAllInfoWindows(map);
+                //open new infowindow
+                this.infowindow.open(map, marker);
+
+                //add marker click event (zoom, and pan)
+                map.setZoom(17);
+                map.setCenter(marker.getPosition());
+                //offset marker to make room for tall infowindow
+                map.panBy(0, -200);
+
+                //update device data
+
+                populateGraph(name)
+
+            });
+
+        } //end createMarkerForDevice()
+
+        //source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
+        function pinSymbol(color) {
+            return {
+                path: 'M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z',
+                fillColor: color,
+                fillOpacity: 1,
+                strokeColor: '#000',
+                strokeWeight: 1,
+                scale: 1
+            };
+        }
+
+        // Hide all markers function
+        function closeAllInfoWindows(map) {
+            markers.forEach(function (marker) {
+                marker.infowindow.close(map, marker);
+            });
+        }
+
+        function populateGraph(deviceName) {
+
+            const dataUrl =
+                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
+
+            const optionsSingleDevice = {
+                "method": "POST",
+                "crossDomain": true,
+                "headers": {
+                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "content-type": "application/json"
+                },
+                "body": JSON.stringify({
+                    "selector": {
+                        "device_name": {
+                            "$eq": deviceName
+                        }
+                    },
+                    "fields": [
+                        "_id",
+                        "device_name",
+                        "temperature",
+                        "humidity",
+                        "created"
+                    ],
+                    "sort": [
+                        {
+                            "created": "desc"  //get the most recent records for this device
+                        }
+                    ],
+                    "limit": 10 //limit this to the 10 most recent records
+                })
+            }
+
+            //get single device data
+            const singleDeviceDataPromise = new Promise((resolve) => {
+                fetch(dataUrl, optionsSingleDevice)
+                    .then(res => res.json())
+                    .then(dataSingle => {
+                        // resolve(data)
+                        console.log('single device data')
+                        console.log(dataSingle)
+
+                        //create temp and hum objects for chart data
+                        //Temperature
+                        let temp = {
+                            x: [],
+                            y: [],
+                            text: [],
+                            textposition: 'top center',
+                            textfont: {
+                                size: 9
+                            },
+                            mode: 'lines+text',
+                            type: 'scatter',
+                            name: 'temp',
+                            line: {
+                                color: 'rgb(253, 180, 75)',
+                            },
+                            hoverinfo: 'x+y'
+                            // marker: { size: 12 }
+                        }
+
+                        //Humidity
+                        let hum = {
+                            x: [],
+                            y: [],
+                            text: [],
+                            textposition: 'top center',
+                            textfont: {
+                                size: 9
+                            },
+                            mode: 'lines+text',
+                            // textposition: 'top center',
+                            type: 'scatter',
+                            name: 'hum',
+                            line: {
+                                color: 'rgb(0, 187, 240)'
+                            },
+                            hoverinfo: 'x+y'
+                        }
+
+                        //loop data to plot onto graph
+                        for (const each in dataSingle.docs) {
+                            //convert UTC packet created time to NZ time
+                            let time = new Date(dataSingle.docs[each].created)
+                            temp.x.push(time)
+                            temp.y.push(dataSingle.docs[each].temperature)
+                            temp.text.push(dataSingle.docs[each].temperature)
+                            hum.x.push(time)
+                            hum.y.push(dataSingle.docs[each].humidity)
+                            hum.text.push(dataSingle.docs[each].humidity)
+                        }
+
+                        // console.log(temp)
+
+                        //reverse arrays so the last 10 records are in ascending order.
+                        temp.x.reverse()
+                        temp.y.reverse()
+                        temp.text.reverse()
+                        hum.x.reverse()
+                        hum.y.reverse()
+                        hum.text.reverse()
+
+                        //chart data
+                        const tempChartData = [temp]
+                        const humChartData = [hum]
+
+                        //chart layout
+                        let layout = {
+                            // title: 'Temperature & Humidity',
+                            autosize: true,
+                            showlegend: false,
+                            legend: {
+                                // "orientation": "h", 
+                                x: 0,
+                                y: 100
+                            },
+                            margin: {
+                                t: 10,
+                                b: 60,
+                                l: 10,
+                                r: 10,
+                                pad: 0
+                            },
+                            xaxis: {
+                                // title: 'AXIS TITLE',
+                                // titlefont{},
+                                tickangle: 45,
+                                tickfont: {
+                                    family: 'Arial, sans-serif',
+                                    size: 9,
+                                    color: 'black'
+                                },
+                                showgrid: false,
+                            },
+                            yaxis: {
+                                // title: 'AXIS TITLE',
+                                tickangle: 0,
+                                tickfont: {
+                                    family: 'Arial, sans-serif',
+                                    size: 9,
+                                    color: 'black'
+                                },
+                                showgrid: false,
+                                showticklabels: false
+                            }
+                        }
+
+                        //update infowindow values for single device
+
+                        //DEVICE NAME
+                        document.getElementById('deviceValue').innerHTML = dataSingle.docs[0].device_name
+                        //LAST ACTIVITY
+                        let time = new Date(dataSingle.docs[0].created).toString()
+                        document.getElementById('timeValue').innerHTML = time
+                        //TEMPERATURE
+                        let roundedTemp = Math.round(dataSingle.docs[0].temperature * 10) / 10
+                        document.getElementById('tempValue').innerHTML = roundedTemp.toFixed(1) + '<sup>&deg;C</sup>'
+                        //HUMIDITY
+                        document.getElementById('humValue').innerHTML = dataSingle.docs[0].humidity + '<sup>%</sup>'
+
+
+                        //load graphs
+                        Plotly.newPlot('tempGraph', tempChartData, layout, { displayModeBar: false });
+                        Plotly.newPlot('humGraph', humChartData, layout, { displayModeBar: false });
+
+                    })
+                    .catch(err => console.log('Error: ', err))
+            })
+
+        }
+
+        function populateHeatMap(deviceName) {
+            console.log('heatmap test running')
+            /*=====
+            ------- This is a query to the Database to get a months worth of a device. for testing for heatmap.
+            ======*/
+
+            const dataUrl =
+                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
+
+            const optionsMonthDevice = {
+                "method": "POST",
+                "crossDomain": true,
+                "headers": {
+                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "content-type": "application/json"
+                },
+                "body": JSON.stringify({
+                    "selector": {
+                        "device_name": {
+                            "$eq": "device-farmname-0013",
+                        },
+                        "created": {
+                            "$regex": "2018-03",
+                        },
+                    },
+                    "fields": [
+                        "_id",
+                        "device_name",
+                        "temperature",
+                        "humidity",
+                        "created"
+                    ],
+                    "sort": [
+                        {
+                            "created": "asc"  //get the most recent records for this device
+                        }
+                    ]
+                })
+            }
+            //note: the cloundant query above is probably better done as a cloudant search,
+            //see: https://stackoverflow.com/questions/43055347/cloudant-how-to-perform-wildcard-searches-on-text-fields/43062534
+
+
+            //get a specific month of device data
+            const singleMonthDataPromise = new Promise((resolve) => {
+                fetch(dataUrl, optionsMonthDevice)
+                    .then(res => res.json())
+                    .then(monthSingle => {
+                        // resolve(data)
+                        console.log('months worth of device data')
+                        console.log(monthSingle)
+
+
+                    })
+                    .catch(err => console.log('Error: ', err))
+            })
+
+        }//END heatmap function
+
+        //================ Button toggle slide in spline
+        //clicking the 'show history button' adds the .slideOpen class to the body.
+        document.querySelector('#splineButton').addEventListener('click', function () {
+            const el = document.getElementsByTagName('body')[0]
+            el.classList.toggle("slideOpen");
+
+            //test heatmap
+            populateHeatMap()
+        })
+
+        //================ PubNub Spline Chart =================
+        pubnub = new PubNub({
+            publishKey: 'pub-c-21bada81-7471-4558-9011-086d008008c7',
+            subscribeKey: 'sub-c-80bc6878-de51-11e7-b4b6-6a46027b7961'
+        })
+
+        eon.chart({
+            pubnub: pubnub,
+            channels: ['node-red-temperature'],
+            limit: 20,
+            generate: {
+                bindto: '#temperature-spline',
+                data: {
+                    labels: true
+                },
+                size: {
+                    height: 230
+                },
+            }
+        });
+
+        eon.chart({
+            pubnub: pubnub,
+            channels: ['node-red-humidity'],
+            limit: 20,
+            generate: {
+                bindto: '#humidity-spline',
+                data: {
+                    labels: true
+                },
+                size: {
+                    height: 230,
+                },
+            }
+        });
+
+    </script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
+    </script>
+</body>
+
+
+
+</html>
