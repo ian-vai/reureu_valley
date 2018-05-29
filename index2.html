@@ -22,7 +22,7 @@
         <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER"
             data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
         <script>
-            !function (d, s, id) {
+            ! function (d, s, id) {
                 var js, fjs = d.getElementsByTagName(s)[0];
                 if (!d.getElementById(id)) {
                     js = d.createElement(s);
@@ -30,8 +30,7 @@
                     js.src = 'https://weatherwidget.io/js/widget.min.js';
                     fjs.parentNode.insertBefore(js, fjs);
                 }
-            }
-                (document, 'script', 'weatherwidget-io-js');
+            }(document, 'script', 'weatherwidget-io-js');
         </script>
     </div>
 
@@ -91,7 +90,7 @@
             <img src="./assets/thermometer.png" width="40" />
             <img src="./assets/humidity.png" width="40" />
             <img src="./assets/tap.svg" width="40" />
-            
+
         </div>
         <div id="slideInInner">
             <div class="flexContainer">
@@ -101,14 +100,14 @@
                 <!-- heatmap test -->
                 <!-- <div class="graph" id="heatGraph"></div> -->
 
-	                <div class="flexRight">
-	                    <p class="splineTitles">Temperature (&deg;C)</p>
-	                    <div id="temperature-spline"></div>
-	                </div>
-	                <div class="flexLeft">
-	                    <p class="splineTitles">Humidty (%)</p>
-	                    <div id="humidity-spline"></div>
-	                </div>
+                <div class="flexRight">
+                    <p class="splineTitles">Temperature (&deg;C)</p>
+                    <div id="temperature-spline"></div>
+                </div>
+                <div class="flexLeft">
+                    <p class="splineTitles">Humidty (%)</p>
+                    <div id="humidity-spline"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -125,12 +124,34 @@
         var map;
 
         function initMap() {
+            let now = new Date().toString()
+            console.log('interface updated @: ' + now)
+
             map = new google.maps.Map(document.getElementById('map'), {
                 zoom: 15.5,
                 center: new google.maps.LatLng(-40.081, 175.475),
                 mapTypeId: 'satellite',
                 disableDefaultUI: true
             });
+
+            //Close open infowindows when map is clicked
+            map.addListener("click", function (event) {
+                closeAllInfoWindows(map);
+            });
+
+            initDataForMap()
+        }
+
+        //update dashboard every 5mins (aka 300000 milliseconds)
+        window.setInterval(initDataForMap, 30000)
+
+        var markers = [];
+
+        function initDataForMap() {
+            markers.forEach(function (marker) {
+                marker.setMap(null);
+            });
+            markers.length = 0;
 
             //KML TEST
             // var paddockKML = new google.maps.KmlLayer({
@@ -168,7 +189,7 @@
                                 "geometry": {
                                     "type": "Point",
                                     "coordinates": [parseFloat(data.rows[device].doc.location[1]),
-                                    parseFloat(data.rows[device].doc.location[0])
+                                        parseFloat(data.rows[device].doc.location[0])
                                     ]
                                 },
                                 "properties": {
@@ -212,11 +233,9 @@
                         "gps",
                         "created"
                     ],
-                    "sort": [
-                        {
-                            "created": "desc"
-                        }
-                    ],
+                    "sort": [{
+                        "created": "desc"
+                    }],
                     "limit": 100
                 })
             }
@@ -265,10 +284,14 @@
                 const computedTempHum = computeRecentDevices(liveDevices)
                 console.log(computedTempHum)
                 //insert computed averages and median into dashboard
-                document.querySelector('#medianTempValue').innerHTML = computedTempHum.medianTemp + ' <sup>&deg;C</sup>';
-                document.querySelector('#averageTempValue').innerHTML = computedTempHum.averageTemp + ' <sup>&deg;C</sup>';
-                document.querySelector('#medianHumValue').innerHTML = computedTempHum.medianHum + ' <sup>%</sup>';
-                document.querySelector('#averageHumValue').innerHTML = computedTempHum.averageHum + ' <sup>%</sup>';
+                document.querySelector('#medianTempValue').innerHTML = computedTempHum.medianTemp +
+                    ' <sup>&deg;C</sup>';
+                document.querySelector('#averageTempValue').innerHTML = computedTempHum.averageTemp +
+                    ' <sup>&deg;C</sup>';
+                document.querySelector('#medianHumValue').innerHTML = computedTempHum.medianHum +
+                    ' <sup>%</sup>';
+                document.querySelector('#averageHumValue').innerHTML = computedTempHum.averageHum +
+                    ' <sup>%</sup>';
 
                 //CREATE MARKERS - Using liveDevices - (ie. only live devices, in the most recent 100 data packets)
                 /*
@@ -289,16 +312,11 @@
                     //return the last device reading. (will only find if is in the last 100 queried)
                     var thisDevice = isDeviceLive(deviceName, deviceData.docs);
                     //function that creates each marker
-                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
+                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp,
+                        thisDevice.lastHum)
                 }
                 //end of for loop (that creates the markers)
             })
-
-            //Close open infowindows when map is clicked
-            map.addListener("click", function (event) {
-                closeAllInfoWindows(map);
-            });
-
 
         } //-------- End initMap()
 
@@ -365,10 +383,10 @@
             }
         }
 
-        var markers = [];
         function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
 
-            let content = `
+            let content =
+                `
         <div class="deviceDataWindow">
                 <div class="deviceDataLabel" id="tempLabel">Temperature</div>
                 <div class="deviceDataReading" id="tempValue"><sup>&deg;C</sup></div>
@@ -479,11 +497,9 @@
                         "humidity",
                         "created"
                     ],
-                    "sort": [
-                        {
-                            "created": "desc"  //get the most recent records for this device
-                        }
-                    ],
+                    "sort": [{
+                        "created": "desc" //get the most recent records for this device
+                    }],
                     "limit": 10 //limit this to the 10 most recent records
                 })
             }
@@ -612,14 +628,20 @@
                         document.getElementById('timeValue').innerHTML = time
                         //TEMPERATURE
                         let roundedTemp = Math.round(dataSingle.docs[0].temperature * 10) / 10
-                        document.getElementById('tempValue').innerHTML = roundedTemp.toFixed(1) + '<sup>&deg;C</sup>'
+                        document.getElementById('tempValue').innerHTML = roundedTemp.toFixed(1) +
+                            '<sup>&deg;C</sup>'
                         //HUMIDITY
-                        document.getElementById('humValue').innerHTML = dataSingle.docs[0].humidity + '<sup>%</sup>'
+                        document.getElementById('humValue').innerHTML = dataSingle.docs[0].humidity +
+                            '<sup>%</sup>'
 
 
                         //load graphs
-                        Plotly.newPlot('tempGraph', tempChartData, layout, { displayModeBar: false });
-                        Plotly.newPlot('humGraph', humChartData, layout, { displayModeBar: false });
+                        Plotly.newPlot('tempGraph', tempChartData, layout, {
+                            displayModeBar: false
+                        });
+                        Plotly.newPlot('humGraph', humChartData, layout, {
+                            displayModeBar: false
+                        });
 
                     })
                     .catch(err => console.log('Error: ', err))
@@ -659,11 +681,9 @@
                         "humidity",
                         "created"
                     ],
-                    "sort": [
-                        {
-                            "created": "asc"  //get the most recent records for this device
-                        }
-                    ]
+                    "sort": [{
+                        "created": "asc" //get the most recent records for this device
+                    }]
                 })
             }
             //note: the cloundant query above is probably better done as a cloudant search,
@@ -684,7 +704,7 @@
                     .catch(err => console.log('Error: ', err))
             })
 
-        }//END heatmap function
+        } //END heatmap function
 
         //================ Button toggle slide in spline
         //clicking the 'show history button' adds the .slideOpen class to the body.
@@ -731,7 +751,6 @@
                 },
             }
         });
-
     </script>
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
     </script>

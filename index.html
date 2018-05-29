@@ -272,9 +272,9 @@
                 console.log(computedTempHum)
                 //insert computed averages and median into dashboard
                 document.querySelector('#medianTempValue').innerHTML = computedTempHum.medianTemp +
-                    ' <sup>°C</sup>';
+                    ' <sup>&deg;C</sup>';
                 document.querySelector('#averageTempValue').innerHTML = computedTempHum.averageTemp +
-                    ' <sup>°C</sup>';
+                    ' <sup>&deg;C</sup>';
                 document.querySelector('#medianHumValue').innerHTML = computedTempHum.medianHum +
                     ' <sup>%</sup>';
                 document.querySelector('#averageHumValue').innerHTML = computedTempHum.averageHum +
@@ -304,7 +304,6 @@
                 }
                 //end of for loop (that creates the markers)
             })
-
 
         } //-------- End initMap()
 
@@ -615,7 +614,7 @@
                         //TEMPERATURE
                         let roundedTemp = Math.round(dataSingle.docs[0].temperature * 10) / 10
                         document.getElementById('tempValue').innerHTML = roundedTemp.toFixed(1) +
-                            '<sup>°C</sup>'
+                            '<sup>&deg;C</sup>'
                         //HUMIDITY
                         document.getElementById('humValue').innerHTML = dataSingle.docs[0].humidity +
                             '<sup>%</sup>'
@@ -639,7 +638,6 @@
         //clicking the 'show history button' adds the .slideOpen class to the body.
         document.querySelector('#splineButton').addEventListener('click', function () {
             const el = document.getElementsByTagName('body')[0]
-            console.log(el)
             el.classList.toggle("slideOpen");
         })
 
