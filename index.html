@@ -19,7 +19,8 @@
 <body>
     <!-- Source: https://weatherwidget.io/ -->
     <div id="weather">
-        <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER" data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
+        <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER"
+            data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
         <script>
             ! function (d, s, id) {
                 var js, fjs = d.getElementsByTagName(s)[0];
@@ -127,8 +128,8 @@
             console.log('interface updated @: ' + now)
 
             map = new google.maps.Map(document.getElementById('map'), {
-                zoom: 15.5,
-                center: new google.maps.LatLng(-40.081, 175.475),
+                zoom: 17,
+                center: new google.maps.LatLng(-40.082, 175.475),
                 mapTypeId: 'satellite',
                 disableDefaultUI: true
             });
@@ -193,7 +194,7 @@
                 "method": "POST",
                 "crossDomain": true,
                 "headers": {
-                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "Authorization": "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
                     "content-type": "application/json"
                 },
                 "body": JSON.stringify({
@@ -291,11 +292,72 @@
                     var thisDevice = isDeviceLive(deviceName, deviceData.docs);
                     //function that creates each marker
                     createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
+
+
+                    //jacking this loop to test google HSL circles
+                    createCircle(thisDevice, latLng)
+
                 }
                 //end of for loop (that creates the markers)
             })
 
+
+
+
+
+
+
         } //-------- End initMap()
+
+        ///////////////////HSL CIRCLE TEST
+        function createCircle(thisDevice, latLng) {
+            var temp = Number(thisDevice.lastTemp)
+
+            var low = [151, 83, 34];   // color of mag 1.0
+            var high = [5, 69, 54];  // color of mag 6.0 and above
+            var minMag = 10.0;
+            var maxMag = 30.0;
+
+            // fraction represents where the value sits between the min and max
+            var fraction = (Math.min(temp, maxMag) - minMag) /
+                (maxMag - minMag);
+
+            var color = interpolateHsl(low, high, fraction);
+
+
+            // return {
+            //     icon: {
+            //         path: google.maps.SymbolPath.CIRCLE,
+            //         strokeWeight: 0.5,
+            //         strokeColor: '#fff',
+            //         fillColor: color,
+            //         fillOpacity: 2 / thisDevice.lastTemp,
+            //         // while an exponent would technically be correct, quadratic looks nicer
+            //         scale: Math.pow(thisDevice.lastTemp, 2)
+            //     },
+            //     zIndex: Math.floor(thisDevice.lastTemp)
+            // };
+
+            return new google.maps.Circle({
+                strokeWeight: 0.5,
+                strokeColor: '#fff',
+                fillColor: color,
+                fillOpacity: 1,
+                map: map,
+                center: latLng,
+                radius: temp
+            });
+        }
+
+        function interpolateHsl(lowHsl, highHsl, fraction) {
+            var color = [];
+            for (var i = 0; i < 3; i++) {
+                // Calculate color based on the fraction.
+                color[i] = (highHsl[i] - lowHsl[i]) * fraction + lowHsl[i];
+            }
+
+            return 'hsl(' + color[0] + ',' + color[1] + '%,' + color[2] + '%)';
+        }
 
         function computeRecentDevices(recentDevices) {
             recentTemps = []
@@ -303,8 +365,13 @@
 
             //loop data for latest device readings
             for (const eachDevice in recentDevices) {
-                recentTemps.push(Number(recentDevices[eachDevice][0].temp))
-                recentHums.push(Number(recentDevices[eachDevice][0].hum))
+                console.log(eachDevice)
+                if (recentDevices[eachDevice][0].temp) {
+                    recentTemps.push(Number(recentDevices[eachDevice][0].temp))
+                }
+                if (recentDevices[eachDevice][0].hum) {
+                    recentHums.push(Number(recentDevices[eachDevice][0].hum))
+                }
             }
 
             //average for most recent Temperature readings
@@ -456,7 +523,7 @@
                 "method": "POST",
                 "crossDomain": true,
                 "headers": {
-                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "Authorization": "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
                     "content-type": "application/json"
                 },
                 "body": JSON.stringify({
@@ -637,7 +704,7 @@
                 "method": "POST",
                 "crossDomain": true,
                 "headers": {
-                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "Authorization": "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
                     "content-type": "application/json"
                 },
                 "body": JSON.stringify({
