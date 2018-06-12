@@ -19,8 +19,7 @@
 <body>
     <!-- Source: https://weatherwidget.io/ -->
     <div id="weather">
-        <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER"
-            data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
+        <a class="weatherwidget-io" href="https://forecast7.com/en/n40d15175d49/halcombe/" data-label_1="REUREU VALLEY" data-label_2="WEATHER" data-font="Roboto" data-icons="Climacons Animated" data-theme="original" data-basecolor="">REUREU VALLEY WEATHER</a>
         <script>
             ! function (d, s, id) {
                 var js, fjs = d.getElementsByTagName(s)[0];
@@ -86,10 +85,22 @@
     <div id="map"></div>
 
     <div class="slideInDiv">
+        <div class="icons">
+            <img src="./assets/thermometer.png" width="40" />
+            <img src="./assets/humidity.png" width="40" />
+            <img src="./assets/tap.svg" width="40" />
+
+        </div>
         <div id="slideInInner">
             <div class="flexContainer">
+
+                <!-- new graph: TODO: that shows history -->
+
+                <!-- heatmap test -->
+                <!-- <div class="graph" id="heatGraph"></div> -->
+
                 <div class="flexRight">
-                    <p class="splineTitles">Temperature (°C)</p>
+                    <p class="splineTitles">Temperature (&deg;C)</p>
                     <div id="temperature-spline"></div>
                 </div>
                 <div class="flexLeft">
@@ -159,35 +170,14 @@
                 }
             }
 
-            let geoJsonData = undefined;
+            let devices = undefined;
 
             //DEVICES!!
             const deviceGeoJsonPromise = new Promise((resolve) => {
-                let geojson = {};
-                geojson['type'] = 'FeatureCollection';
-                geojson['features'] = [];
-
                 fetch(devicesUrl, optionsDevice)
                     .then(res => res.json())
                     .then(data => {
-                        //create geojson: //create geojson loop. source: https://gist.github.com/mapsam/7320ccb2aba0ac372050
-                        for (const device in data.rows) {
-                            const newFeature = {
-                                "type": "Feature",
-                                "geometry": {
-                                    "type": "Point",
-                                    "coordinates": [parseFloat(data.rows[device].doc.location[1]),
-                                        parseFloat(data.rows[device].doc.location[0])
-                                    ]
-                                },
-                                "properties": {
-                                    "title": data.rows[device].doc.name,
-                                    "description": data.rows[device].doc.description
-                                }
-                            }
-                            geojson['features'].push(newFeature);
-                        }
-                        resolve(geojson)
+                        resolve(data.rows.map((row) => row.doc))
                     })
                     .catch(err => console.log('Error: ', err))
             })
@@ -239,11 +229,11 @@
             })
 
             deviceGeoJsonPromise.then(data => {
-                geoJsonData = data
+                devices = data
                 return deviceDataPromise
             }).then(deviceData => {
-                console.log("got geojson?")
-                console.log(geoJsonData)
+                console.log("got devices?")
+                console.log(devices)
                 console.log("got data?")
                 console.log(deviceData)
 
@@ -258,6 +248,7 @@
                         created: device.created,
                         temp: device.temperature,
                         hum: device.humidity,
+                        //TODO: flow: device.flow (when adding new devices) will also need to be brought through the Fetch (optionsData))
                         location: device.gps
                     })
                     return recentDevices
@@ -291,16 +282,15 @@
 
                 //CREATE MARKERS - Using geoJson - (ie. All devices in DB)
                 //loop each device
-                for (var i = 0; i < geoJsonData.features.length; i++) {
+                for (var i = 0; i < devices.length; i++) {
                     //get device latlng coordinates for marker
-                    var coords = geoJsonData.features[i].geometry.coordinates;
-                    var latLng = new google.maps.LatLng(coords[1], coords[0]);
-                    var deviceName = geoJsonData.features[i].properties.title
+                    var coords = devices[i].location;
+                    var latLng = new google.maps.LatLng(coords[0], coords[1]);
+                    var deviceName = devices[i].name
                     //return the last device reading. (will only find if is in the last 100 queried)
                     var thisDevice = isDeviceLive(deviceName, deviceData.docs);
                     //function that creates each marker
-                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp,
-                        thisDevice.lastHum)
+                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
                 }
                 //end of for loop (that creates the markers)
             })
@@ -634,11 +624,71 @@
 
         }
 
+        function populateHeatMap(deviceName) {
+            console.log('heatmap test running')
+            /*=====
+            ------- This is a query to the Database to get a months worth of a device. for testing for heatmap.
+            ======*/
+
+            const dataUrl =
+                'https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find'
+
+            const optionsMonthDevice = {
+                "method": "POST",
+                "crossDomain": true,
+                "headers": {
+                    "Authorization": "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y=",
+                    "content-type": "application/json"
+                },
+                "body": JSON.stringify({
+                    "selector": {
+                        "device_name": {
+                            "$eq": "device-farmname-0013",
+                        },
+                        "created": {
+                            "$regex": "2018-03",
+                        },
+                    },
+                    "fields": [
+                        "_id",
+                        "device_name",
+                        "temperature",
+                        "humidity",
+                        "created"
+                    ],
+                    "sort": [{
+                        "created": "asc" //get the most recent records for this device
+                    }]
+                })
+            }
+            //note: the cloundant query above is probably better done as a cloudant search,
+            //see: https://stackoverflow.com/questions/43055347/cloudant-how-to-perform-wildcard-searches-on-text-fields/43062534
+
+
+            //get a specific month of device data
+            const singleMonthDataPromise = new Promise((resolve) => {
+                fetch(dataUrl, optionsMonthDevice)
+                    .then(res => res.json())
+                    .then(monthSingle => {
+                        // resolve(data)
+                        console.log('months worth of device data')
+                        console.log(monthSingle)
+
+
+                    })
+                    .catch(err => console.log('Error: ', err))
+            })
+
+        } //END heatmap function
+
         //================ Button toggle slide in spline
         //clicking the 'show history button' adds the .slideOpen class to the body.
         document.querySelector('#splineButton').addEventListener('click', function () {
             const el = document.getElementsByTagName('body')[0]
             el.classList.toggle("slideOpen");
+
+            //test heatmap
+            populateHeatMap()
         })
 
         //================ PubNub Spline Chart =================
