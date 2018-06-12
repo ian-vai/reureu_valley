@@ -87,9 +87,10 @@
 
     <div class="slideInDiv">
         <div class="icons">
-            <img src="./assets/thermometer.png" width="40" />
-            <img src="./assets/humidity.png" width="40" />
-            <img src="./assets/tap.svg" width="40" />
+            <img id="tempIcon" src="./assets/thermometer.png" width="40" />
+            <img id="waterIcon" src="./assets/tap.svg" width="40" />
+            <img id="fenceIcon" src="./assets/fence.svg" width="40" />
+
 
         </div>
         <div id="slideInInner">
@@ -143,15 +144,21 @@
         }
 
         //update dashboard every 5mins (aka 300000 milliseconds)
-        window.setInterval(initDataForMap, 30000)
+        window.setInterval(initDataForMap, 300000)
 
         var markers = [];
+        var circles = [];
 
         function initDataForMap() {
             markers.forEach(function (marker) {
                 marker.setMap(null);
             });
             markers.length = 0;
+
+            circles.forEach(function (circle) {
+                circle.setMap(null);
+            });
+            circles.length = 0;
 
             //KML TEST
             // var paddockKML = new google.maps.KmlLayer({
@@ -209,6 +216,10 @@
                         "device_name",
                         "temperature",
                         "humidity",
+                        "amps",
+                        "kilovolts",
+                        "flow",
+                        "status",
                         "gps",
                         "created"
                     ],
@@ -249,6 +260,10 @@
                         created: device.created,
                         temp: device.temperature,
                         hum: device.humidity,
+                        amps: device.amps,
+                        kilovolts: device.kilovolts,
+                        flow: device.flow,
+                        gate: device.status,
                         //TODO: flow: device.flow (when adding new devices) will also need to be brought through the Fetch (optionsData))
                         location: device.gps
                     })
@@ -281,31 +296,75 @@
                 }
                 */
 
-                //CREATE MARKERS - Using geoJson - (ie. All devices in DB)
-                //loop each device
-                for (var i = 0; i < devices.length; i++) {
-                    //get device latlng coordinates for marker
-                    var coords = devices[i].location;
-                    var latLng = new google.maps.LatLng(coords[0], coords[1]);
-                    var deviceName = devices[i].name
-                    //return the last device reading. (will only find if is in the last 100 queried)
-                    var thisDevice = isDeviceLive(deviceName, deviceData.docs);
-                    //function that creates each marker
-                    createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum)
+                //Add events to ICONS
+                document.getElementById('tempIcon').addEventListener('click', () => {
+                    console.log('icon clicked')
+                    createMarkers("THS")
+                })
+                document.getElementById('waterIcon').addEventListener('click', () => {
+                    console.log('icon clicked')
+                    createMarkers("WF")
+                })
+                document.getElementById('fenceIcon').addEventListener('click', () => {
+                    console.log('icon clicked')
+                    createMarkers("EF")
+                })
+
+                function createMarkers(iconType) {
+
+                    //TODO: New object of only these devices (iconType)
+
+                    markers.forEach(function (marker) {
+                        marker.setMap(null);
+                    });
+                    markers.length = 0;
+
+                    circles.forEach(function (circle) {
+                        circle.setMap(null);
+                    });
+                    circles.length = 0;
 
 
-                    //jacking this loop to test google HSL circles
-                    createCircle(thisDevice, latLng)
+                    //CREATE MARKERS - Using geoJson - (ie. All devices in DB)
+                    //loop each device
+                    for (var i = 0; i < devices.length; i++) {
+                        //get device latlng coordinates for marker
+                        var coords = devices[i].location;
+                        var latLng = new google.maps.LatLng(coords[0], coords[1]);
+                        var deviceName = devices[i].name
+                        var deviceType = devices[i].type
+                        //return the last device reading. (will only find if is in the last 100 queried)
+                        var thisDevice = isDeviceLive(deviceName, deviceData.docs);
 
+                        if (iconType == deviceType) {
+                            //CREATE MARKERS!!!!!!
+                            createMarkerForDevice(latLng, deviceName, thisDevice.markerColour, thisDevice.lastTemp, thisDevice.lastHum, deviceType)
+                            //jacking this loop to test google HSL circles
+                            createCircle(thisDevice, latLng)
+                        }
+
+
+                    }
+                    //end of for loop (that creates the markers)
                 }
-                //end of for loop (that creates the markers)
-            })
 
 
 
 
+            }) //end Promise
 
 
+            //ADD NEW MARKER ON CLICK
+            // google.maps.event.addListener(map, 'click', function (event) {
+            //     placeMarker(event.latLng);
+            // });
+
+            // function placeMarker(location) {
+            //     var marker = new google.maps.Marker({
+            //         position: location,
+            //         map: map
+            //     });
+            // }
 
         } //-------- End initMap()
 
@@ -338,15 +397,17 @@
             //     zIndex: Math.floor(thisDevice.lastTemp)
             // };
 
-            return new google.maps.Circle({
+            var circle = new google.maps.Circle({
                 strokeWeight: 0.5,
                 strokeColor: '#fff',
                 fillColor: color,
-                fillOpacity: 1,
+                fillOpacity: 0.6,
                 map: map,
                 center: latLng,
                 radius: temp
             });
+
+            circles.push(circle)
         }
 
         function interpolateHsl(lowHsl, highHsl, fraction) {
@@ -365,7 +426,7 @@
 
             //loop data for latest device readings
             for (const eachDevice in recentDevices) {
-                console.log(eachDevice)
+
                 if (recentDevices[eachDevice][0].temp) {
                     recentTemps.push(Number(recentDevices[eachDevice][0].temp))
                 }
@@ -425,7 +486,8 @@
             }
         }
 
-        function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum) {
+
+        function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum, type) {
 
             let content =
                 `
