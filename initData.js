@@ -151,15 +151,19 @@ function initDataForMap() {
       //Add events to ICONS
       document.getElementById("tempIcon").addEventListener("click", () => {
         console.log("icon clicked");
-        createMarkers("THS");
+        createMarkers(DEVICE_TYPE.THS);
       });
       document.getElementById("waterIcon").addEventListener("click", () => {
         console.log("icon clicked");
-        createMarkers("WF");
+        createMarkers(DEVICE_TYPE.WF);
       });
       document.getElementById("fenceIcon").addEventListener("click", () => {
         console.log("icon clicked");
-        createMarkers("EF");
+        createMarkers(DEVICE_TYPE.EF);
+      });
+      document.getElementById("gateIcon").addEventListener("click", () => {
+        console.log("icon clicked");
+        createMarkers(DEVICE_TYPE.GT);
       });
 
       function createMarkers(iconType) {

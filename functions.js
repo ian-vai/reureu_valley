@@ -145,8 +145,8 @@ function isDeviceLive(liveDevices, type, nameKey, myArray) {
           markerLabel: latestData.gate,
           circleMaxValue: 1.0,
           circleMinValue: 0.0,
-          circleMaxColor: [102, 0, 255],
-          circleMinColor: [255, 51, 51],
+          circleMaxColor: [255, 51, 51],
+          circleMinColor: [124, 252, 0],
           circleValue: (latestData.gate === "Open") ? 1.0 : 0.0,
           gate: latestData.gate
         };
@@ -501,6 +501,244 @@ function populateGraph(deviceName, type) {
 
           //load graphs
           Plotly.newPlot("activeFlowGraph", flowChartData, layout, {
+            displayModeBar: false
+          });
+        } else if (type === DEVICE_TYPE.EF) {
+
+          //create kilovolts and amps objects for chart data
+          //Kilovolts
+          let kilovolts = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
+            },
+            mode: "lines+text",
+            type: "scatter",
+            name: "kilovolts",
+            line: {
+              color: "rgb(253, 180, 75)"
+            },
+            hoverinfo: "x+y"
+            // marker: { size: 12 }
+          };
+
+          //Amps
+          let amps = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
+            },
+            mode: "lines+text",
+            // textposition: 'top center',
+            type: "scatter",
+            name: "amps",
+            line: {
+              color: "rgb(0, 187, 240)"
+            },
+            hoverinfo: "x+y"
+          };
+
+          //loop data to plot onto graph
+          for (const each in dataSingle.docs) {
+            //convert UTC packet created time to NZ time
+            let time = new Date(dataSingle.docs[each].created);
+            kilovolts.x.push(time);
+            kilovolts.y.push(dataSingle.docs[each].kilovolts);
+            kilovolts.text.push(dataSingle.docs[each].kilovolts);
+            amps.x.push(time);
+            amps.y.push(dataSingle.docs[each].amps);
+            amps.text.push(dataSingle.docs[each].amps);
+          }
+
+          // console.log(temp)
+
+          //reverse arrays so the last 10 records are in ascending order.
+          kilovolts.x.reverse();
+          kilovolts.y.reverse();
+          kilovolts.text.reverse();
+          amps.x.reverse();
+          amps.y.reverse();
+          amps.text.reverse();
+
+          //chart data
+          const kilovoltsChartData = [kilovolts];
+          const ampsChartData = [amps];
+
+          //chart layout
+          let layout = {
+            // title: 'Kilovolts & Amps',
+            autosize: true,
+            showlegend: false,
+            legend: {
+              // "orientation": "h",
+              x: 0,
+              y: 100
+            },
+            margin: {
+              t: 10,
+              b: 60,
+              l: 10,
+              r: 10,
+              pad: 0
+            },
+            xaxis: {
+              // title: 'AXIS TITLE',
+              // titlefont{},
+              tickangle: 45,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false
+            },
+            yaxis: {
+              // title: 'AXIS TITLE',
+              tickangle: 0,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false,
+              showticklabels: false
+            }
+          };
+
+          //update infowindow values for single device
+
+          activeDataWindow.innerHTML = `
+          <div class="deviceDataLabel" id="kilovoltsLabel">Kilovolts</div>
+          <div class="deviceDataReading" id="kilovoltsValue">${(Math.round(dataSingle.docs[0].kilovolts * 10) / 10).toFixed(1)}<sup>kV</sup></div>
+  
+          <div class="deviceDataLabel" id="ampsLabel">Humidity</div>
+          <div class="deviceDataReading" id="ampsValue">${dataSingle.docs[0].amps}<sup>A</sup></div>
+  
+          <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+  
+          <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+  
+          <div class="deviceDataLabel" id="kilovoltsHistoryLabel">kilovolts History</div>
+          <div class="graph deviceDataLabel" id="activeKilovoltsGraph"></div>
+  
+          <div class="deviceDataLabel" id="ampsHistoryLabel">Amps History</div>
+          <div class="graph deviceDataLabel" id="activeAmpsGraph"></div>
+          `;
+
+          //load graphs
+          Plotly.newPlot("activeKilovoltsGraph", kilovoltsChartData, layout, {
+            displayModeBar: false
+          });
+          Plotly.newPlot("activeAmpsGraph", ampsChartData, layout, {
+            displayModeBar: false
+          });
+        } else if (type === DEVICE_TYPE.GT) {
+          //create gate object for chart data
+          //gate
+          let gate = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
+            },
+            mode: "lines+text",
+            type: "scatter",
+            name: "gate",
+            line: {
+              color: "rgb(253, 180, 75)"
+            },
+            hoverinfo: "x+y"
+            // marker: { size: 12 }
+          };
+
+          //loop data to plot onto graph
+          for (const each in dataSingle.docs) {
+            //convert UTC packet created time to NZ time
+            let time = new Date(dataSingle.docs[each].created);
+            gate.x.push(time);
+            gate.y.push(dataSingle.docs[each].status);
+            gate.text.push(dataSingle.docs[each].status);
+          }
+
+          // console.log(temp)
+
+          //reverse arrays so the last 10 records are in ascending order.
+          gate.x.reverse();
+          gate.y.reverse();
+          gate.text.reverse();
+
+          //chart data
+          const gateChartData = [gate];
+
+          //chart layout
+          let layout = {
+            // title: 'Gate',
+            autosize: true,
+            showlegend: false,
+            legend: {
+              // "orientation": "h",
+              x: 0,
+              y: 100
+            },
+            margin: {
+              t: 10,
+              b: 60,
+              l: 10,
+              r: 10,
+              pad: 0
+            },
+            xaxis: {
+              // title: 'AXIS TITLE',
+              // titlefont{},
+              tickangle: 45,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false
+            },
+            yaxis: {
+              // title: 'AXIS TITLE',
+              tickangle: 0,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false,
+              showticklabels: false
+            }
+          };
+
+          //update infowindow values for single device
+
+          activeDataWindow.innerHTML = `
+          <div class="deviceDataLabel" id="gateLabel">Gate</div>
+          <div class="deviceDataReading" id="gateValue">${dataSingle.docs[0].status}</div>
+  
+          <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+  
+          <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+  
+          <div class="deviceDataLabel" id="gateHistoryLabel">Gate History</div>
+          <div class="graph deviceDataLabel" id="activeGateGraph"></div>
+          `;
+
+          //load graphs
+          Plotly.newPlot("activeGateGraph", gateChartData, layout, {
             displayModeBar: false
           });
         }
