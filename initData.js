@@ -2,12 +2,12 @@ var markers = [];
 var circles = [];
 
 function initDataForMap() {
-  markers.forEach(function(marker) {
+  markers.forEach(function (marker) {
     marker.setMap(null);
   });
   markers.length = 0;
 
-  circles.forEach(function(circle) {
+  circles.forEach(function (circle) {
     circle.setMap(null);
   });
   circles.length = 0;
@@ -26,8 +26,7 @@ function initDataForMap() {
     method: "GET",
     crossDomain: true,
     headers: {
-      Authorization:
-        "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y="
+      Authorization: "Basic c29uZXNwZWN0aWVzdHJpdmFpbnN0cmFpOmM1ZGZjMWY1MDBhYWQ1OTg3M2RkYjY3YTE0NTIwZmNiYjI0YzAyY2Y="
     }
   };
 
@@ -53,8 +52,7 @@ function initDataForMap() {
     method: "POST",
     crossDomain: true,
     headers: {
-      Authorization:
-        "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
+      Authorization: "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
       "content-type": "application/json"
     },
     body: JSON.stringify({
@@ -76,11 +74,9 @@ function initDataForMap() {
         "gps",
         "created"
       ],
-      sort: [
-        {
-          created: "desc"
-        }
-      ],
+      sort: [{
+        created: "desc"
+      }],
       limit: 100
     })
   };
@@ -115,13 +111,12 @@ function initDataForMap() {
           recentDevices[device.device_name] || [];
         recentDevices[device.device_name].push({
           created: device.created,
-          temp: device.temperature,
-          hum: device.humidity,
+          temperature: device.temperature,
+          humidity: device.humidity,
           amps: device.amps,
           kilovolts: device.kilovolts,
           flow: device.flow,
           gate: device.status,
-          //TODO: flow: device.flow (when adding new devices) will also need to be brought through the Fetch (optionsData))
           location: device.gps
         });
         return recentDevices;
@@ -170,12 +165,12 @@ function initDataForMap() {
       function createMarkers(iconType) {
         //TODO: New object of only these devices (iconType)
 
-        markers.forEach(function(marker) {
+        markers.forEach(function (marker) {
           marker.setMap(null);
         });
         markers.length = 0;
 
-        circles.forEach(function(circle) {
+        circles.forEach(function (circle) {
           circle.setMap(null);
         });
         circles.length = 0;
@@ -189,18 +184,17 @@ function initDataForMap() {
           var deviceName = devices[i].name;
           var deviceType = devices[i].type;
           //return the last device reading. (will only find if is in the last 100 queried)
-          var thisDevice = isDeviceLive(deviceName, deviceData.docs);
+          var thisDevice = isDeviceLive(liveDevices, deviceType, deviceName, deviceData.docs);
 
           if (iconType == deviceType) {
             //CREATE MARKERS!!!!!!
             createMarkerForDevice(
+              deviceType,
               latLng,
               deviceName,
-              thisDevice.markerColour,
-              thisDevice.lastTemp,
-              thisDevice.lastHum,
-              deviceType
+              thisDevice
             );
+
             //jacking this loop to test google HSL circles
             createCircle(thisDevice, latLng);
           }

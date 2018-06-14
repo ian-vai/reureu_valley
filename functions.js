@@ -1,29 +1,17 @@
+const DEVICE_TYPE = {
+  THS: "THS",
+  WF: "WF",
+  GT: "GT",
+  EF: "EF"
+}
+
 ///////////////////HSL CIRCLE TEST
 function createCircle(thisDevice, latLng) {
-  var temp = Number(thisDevice.lastTemp);
-
-  var low = [151, 83, 34]; // color of mag 1.0
-  var high = [5, 69, 54]; // color of mag 6.0 and above
-  var minMag = 10.0;
-  var maxMag = 30.0;
 
   // fraction represents where the value sits between the min and max
-  var fraction = (Math.min(temp, maxMag) - minMag) / (maxMag - minMag);
+  var fraction = (Math.min(thisDevice.circleValue, thisDevice.circleMaxValue) - thisDevice.circleMinValue) / (thisDevice.circleMaxValue - thisDevice.circleMinValue);
 
-  var color = interpolateHsl(low, high, fraction);
-
-  // return {
-  //     icon: {
-  //         path: google.maps.SymbolPath.CIRCLE,
-  //         strokeWeight: 0.5,
-  //         strokeColor: '#fff',
-  //         fillColor: color,
-  //         fillOpacity: 2 / thisDevice.lastTemp,
-  //         // while an exponent would technically be correct, quadratic looks nicer
-  //         scale: Math.pow(thisDevice.lastTemp, 2)
-  //     },
-  //     zIndex: Math.floor(thisDevice.lastTemp)
-  // };
+  var color = interpolateRgb(thisDevice.circleMinColor, thisDevice.circleMaxColor, fraction);
 
   var circle = new google.maps.Circle({
     strokeWeight: 0.5,
@@ -32,20 +20,20 @@ function createCircle(thisDevice, latLng) {
     fillOpacity: 0.6,
     map: map,
     center: latLng,
-    radius: temp
+    radius: 30
   });
 
   circles.push(circle);
 }
 
-function interpolateHsl(lowHsl, highHsl, fraction) {
+function interpolateRgb(lowRgb, highRgb, fraction) {
   var color = [];
   for (var i = 0; i < 3; i++) {
     // Calculate color based on the fraction.
-    color[i] = (highHsl[i] - lowHsl[i]) * fraction + lowHsl[i];
+    color[i] = (highRgb[i] - lowRgb[i]) * fraction + lowRgb[i];
   }
 
-  return "hsl(" + color[0] + "," + color[1] + "%," + color[2] + "%)";
+  return "rgb(" + color[0] + "," + color[1] + "," + color[2] + ")";
 }
 
 function computeRecentDevices(recentDevices) {
@@ -54,11 +42,11 @@ function computeRecentDevices(recentDevices) {
 
   //loop data for latest device readings
   for (const eachDevice in recentDevices) {
-    if (recentDevices[eachDevice][0].temp) {
-      recentTemps.push(Number(recentDevices[eachDevice][0].temp));
+    if (recentDevices[eachDevice][0].temperature != null) {
+      recentTemps.push(Number(recentDevices[eachDevice][0].temperature));
     }
-    if (recentDevices[eachDevice][0].hum) {
-      recentHums.push(Number(recentDevices[eachDevice][0].hum));
+    if (recentDevices[eachDevice][0].humidity != null) {
+      recentHums.push(Number(recentDevices[eachDevice][0].humidity));
     }
   }
 
@@ -94,26 +82,80 @@ function computeRecentDevices(recentDevices) {
   };
 }
 
-function isDeviceLive(nameKey, myArray) {
+function isDeviceLive(liveDevices, type, nameKey, myArray) {
   //loop all docs. see if nameKey is in docs. if it is make green. if not make grey.
-  for (var i = 0; i < myArray.length; i++) {
-    if (myArray[i].device_name === nameKey) {
-      // return this if device WAS present
-      return {
-        markerColour: "#7CFC00",
-        lastTemp: Number(myArray[i].temperature).toFixed(1),
-        lastHum: Number(myArray[i].humidity).toFixed(1)
-      };
+  const data = liveDevices[nameKey];
+
+  if (data == null) {
+    return {
+      markerColour: "grey",
+      markerLabel: "offline",
+      circleMaxValue: 1.0,
+      circleMinValue: 0.0,
+      circleMaxColor: [0, 0, 0],
+      circleMinColor: [255, 51, 51],
+      circleValue: 0,
+    };
+  } else {
+    const latestData = data.sort((a, b) => a.created > b.created)[0];
+    switch (type) {
+      case DEVICE_TYPE.THS:
+        const temperature = Number(latestData.temperature).toFixed(2);
+        const humidity = Number(latestData.humidity).toFixed(2);
+        return {
+          markerColour: "#7CFC00",
+          markerLabel: String(temperature),
+          circleMaxValue: 30.0,
+          circleMinValue: 10.0,
+          circleMaxColor: [124, 252, 0],
+          circleMinColor: [255, 51, 51],
+          circleValue: temperature,
+          temperature: temperature,
+          humidity: humidity,
+        };
+      case DEVICE_TYPE.WF:
+        const flow = Number(latestData.flow).toFixed(2);
+        return {
+          markerColour: "#4da6ff",
+          markerLabel: String(flow),
+          circleMaxValue: 100.0,
+          circleMinValue: 60.0,
+          circleMaxColor: [77, 166, 255],
+          circleMinColor: [255, 51, 51],
+          circleValue: flow,
+          flow: flow
+        };
+      case DEVICE_TYPE.EF:
+        const amps = Number(latestData.amps).toFixed(2);
+        const kilovolts = Number(latestData.kilovolts).toFixed(2);
+        return {
+          markerColour: "#e6e600",
+          markerLabel: String(kilovolts),
+          circleMaxValue: 8.0,
+          circleMinValue: 0.0,
+          circleMaxColor: [230, 230, 0],
+          circleMinColor: [255, 51, 51],
+          circleValue: kilovolts,
+          amps: amps,
+          kilovolts: kilovolts
+        };
+      case DEVICE_TYPE.GT:
+        return {
+          markerColour: "#6600ff",
+          markerLabel: latestData.gate,
+          circleMaxValue: 1.0,
+          circleMinValue: 0.0,
+          circleMaxColor: [102, 0, 255],
+          circleMinColor: [255, 51, 51],
+          circleValue: (latestData.gate === "Open") ? 1.0 : 0.0,
+          gate: latestData.gate
+        };
     }
+
   }
-  return {
-    markerColour: "grey",
-    lastTemp: "offline",
-    lastHum: "offline"
-  };
 }
 
-function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum, type) {
+function createMarkerForDevice(type, latLng, name, markerData) {
   let content = `
 <div class="deviceDataWindow">
         <div class="deviceDataLabel" id="tempLabel">Temperature</div>
@@ -150,10 +192,17 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum, type) {
     position: latLng,
     map: map,
     // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
-    icon: pinSymbol(colour),
+    icon: {
+      path: "M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z",
+      fillColor: markerData.markerColour,
+      fillOpacity: 1,
+      strokeColor: "#000",
+      strokeWeight: 1,
+      scale: 1
+    },
     label: {
-      text: lastTemp, //label on marker
-      color: colour
+      text: markerData.markerLabel, //label on marker
+      color: markerData.markerColour
     },
     infowindow: infowindowData
   });
@@ -161,7 +210,7 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum, type) {
   markers.push(marker);
 
   //add infoWindow Event
-  marker.addListener("click", function() {
+  marker.addListener("click", function () {
     //close any open info windows
     closeAllInfoWindows(map);
     //open new infowindow
@@ -179,22 +228,9 @@ function createMarkerForDevice(latLng, name, colour, lastTemp, lastHum, type) {
   });
 } //end createMarkerForDevice()
 
-//source: https://stackoverflow.com/questions/40289624/change-google-map-marker-color-to-a-color-of-my-choice
-function pinSymbol(color) {
-  return {
-    path:
-      "M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z",
-    fillColor: color,
-    fillOpacity: 1,
-    strokeColor: "#000",
-    strokeWeight: 1,
-    scale: 1
-  };
-}
-
 // Hide all markers function
 function closeAllInfoWindows(map) {
-  markers.forEach(function(marker) {
+  markers.forEach(function (marker) {
     marker.infowindow.close(map, marker);
   });
 }
@@ -210,8 +246,7 @@ function populateGraph(deviceName) {
     method: "POST",
     crossDomain: true,
     headers: {
-      Authorization:
-        "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
+      Authorization: "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
       "content-type": "application/json"
     },
     body: JSON.stringify({
@@ -221,11 +256,9 @@ function populateGraph(deviceName) {
         }
       },
       fields: ["_id", "device_name", "temperature", "humidity", "created"],
-      sort: [
-        {
-          created: "desc" //get the most recent records for this device
-        }
-      ],
+      sort: [{
+        created: "desc" //get the most recent records for this device
+      }],
       limit: 10 //limit this to the 10 most recent records
     })
   };
