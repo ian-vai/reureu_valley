@@ -47,13 +47,3 @@ function populateHeatMap(deviceName) {
       .catch(err => console.log("Error: ", err));
   });
 } //END heatmap function
-
-//================ Button toggle slide in spline
-//clicking the 'show history button' adds the .slideOpen class to the body.
-document.querySelector("#splineButton").addEventListener("click", function() {
-  const el = document.getElementsByTagName("body")[0];
-  el.classList.toggle("slideOpen");
-
-  //test heatmap
-  populateHeatMap();
-});

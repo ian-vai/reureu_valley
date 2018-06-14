@@ -87,20 +87,30 @@
 
     <div class="slideInDiv">
         <div class="icons">
-            <img id="tempIcon" src="./assets/thermometer.png" width="40" />
-            <img id="waterIcon" src="./assets/tap.svg" width="40" />
-            <img id="fenceIcon" src="./assets/fence.svg" width="40" />
-
+            <div class="icon">
+                <img src="./assets/thermometer.png" id="tempIcon" width="40" />
+                <p class="iconTitle" id="tempTitle">TEMP / HUM</p>
+            </div>
+            <div class="icon">
+                <img src="./assets/tap.svg" id="waterIcon" width="40" />
+                <p class="iconTitle" id="waterTitle">WATER</p>
+            </div>
+            <div class="icon">
+                <img src="./assets/electric.svg" id="fenceIcon" width="40" />
+                <p class="iconTitle" id="fenceTitle">ELECTRIC FENCE</p>
+            </div>
+            <div class="icon">
+                <img src="./assets/gate.svg" id="gateIcon" width="40" />
+                <p class="iconTitle" id="gateTitle">GATES</p>
+            </div>
+            <div class="icon">
+                <img src="./assets/weather.svg" id="weatherIcon" width="40" />
+                <p class="iconTitle" id="weatherTitle">WEATHER</p>
+            </div>
 
         </div>
         <div id="slideInInner">
             <div class="flexContainer">
-
-                <!-- new graph: TODO: that shows history -->
-
-                <!-- heatmap test -->
-                <!-- <div class="graph" id="heatGraph"></div> -->
-
                 <div class="flexRight">
                     <p class="splineTitles">Temperature (&deg;C)</p>
                     <div id="temperature-spline"></div>
@@ -126,6 +136,17 @@
     <script src="initData.js"></script>
 
     <script src="initMap.js"></script>
+
+    <script src="pubNubSpline.js"></script>
+
+    <script>
+        //================ Button toggle slide in spline
+        //clicking the 'show history button' adds the .slideOpen class to the body.
+        document.querySelector("#splineButton").addEventListener("click", function () {
+            const el = document.getElementsByTagName("body")[0];
+            el.classList.toggle("slideOpen");
+        });
+    </script>
 
 
     <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCA4KEFZfbeZhUwtpYfm-__hkTrIuwfyPs&callback=initMap">
