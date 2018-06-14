@@ -156,27 +156,7 @@ function isDeviceLive(liveDevices, type, nameKey, myArray) {
 }
 
 function createMarkerForDevice(type, latLng, name, markerData) {
-  let content = `
-<div class="deviceDataWindow">
-        <div class="deviceDataLabel" id="tempLabel">Temperature</div>
-        <div class="deviceDataReading" id="tempValue"><sup>&deg;C</sup></div>
-
-        <div class="deviceDataLabel" id="humLabel">Humidity</div>
-        <div class="deviceDataReading" id="humValue"><sup>%</sup></div>
-
-        <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-        <div class="deviceDataValue" id="deviceValue"></div>
-
-        <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-        <div class="deviceDataValue" id="timeValue"></div>
-
-        <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
-        <div class="graph deviceDataLabel" id="tempGraph"></div>
-
-        <div class="deviceDataLabel" id="humHistoryLabel">Hum History</div>
-        <div class="graph deviceDataLabel" id="humGraph"></div>
-</div>
-`;
+  let content = `<div id="activeDataWindow" class="deviceDataWindow"></div>`;
 
   //create infowindow
   var infowindowData = new google.maps.InfoWindow({
@@ -224,7 +204,7 @@ function createMarkerForDevice(type, latLng, name, markerData) {
 
     //update device data
 
-    populateGraph(name);
+    populateGraph(name, type);
   });
 } //end createMarkerForDevice()
 
@@ -238,7 +218,7 @@ function closeAllInfoWindows(map) {
 /*
 ============= Populate Graph =============
 */
-function populateGraph(deviceName) {
+function populateGraph(deviceName, type) {
   const dataUrl =
     "https://0d664ca0-3c79-4620-a429-b55e8512d0c5-bluemix.cloudant.com/device_data/_find";
 
@@ -255,13 +235,26 @@ function populateGraph(deviceName) {
           $eq: deviceName
         }
       },
-      fields: ["_id", "device_name", "temperature", "humidity", "created"],
+      fields: [
+        "_id",
+        "device_name",
+        "temperature",
+        "humidity",
+        "created",
+        "amps",
+        "kilovolts",
+        "flow",
+        "status",
+      ],
       sort: [{
         created: "desc" //get the most recent records for this device
       }],
       limit: 10 //limit this to the 10 most recent records
     })
   };
+
+  const activeDataWindow = document.getElementById("activeDataWindow");
+  activeDataWindow.innerHTML = `<h3>Loading your shit...</h3>`
 
   //get single device data
   const singleDeviceDataPromise = new Promise(resolve => {
@@ -272,135 +265,245 @@ function populateGraph(deviceName) {
         console.log("single device data");
         console.log(dataSingle);
 
-        //create temp and hum objects for chart data
-        //Temperature
-        let temp = {
-          x: [],
-          y: [],
-          text: [],
-          textposition: "top center",
-          textfont: {
-            size: 9
-          },
-          mode: "lines+text",
-          type: "scatter",
-          name: "temp",
-          line: {
-            color: "rgb(253, 180, 75)"
-          },
-          hoverinfo: "x+y"
-          // marker: { size: 12 }
-        };
+        if (type === DEVICE_TYPE.THS) {
 
-        //Humidity
-        let hum = {
-          x: [],
-          y: [],
-          text: [],
-          textposition: "top center",
-          textfont: {
-            size: 9
-          },
-          mode: "lines+text",
-          // textposition: 'top center',
-          type: "scatter",
-          name: "hum",
-          line: {
-            color: "rgb(0, 187, 240)"
-          },
-          hoverinfo: "x+y"
-        };
-
-        //loop data to plot onto graph
-        for (const each in dataSingle.docs) {
-          //convert UTC packet created time to NZ time
-          let time = new Date(dataSingle.docs[each].created);
-          temp.x.push(time);
-          temp.y.push(dataSingle.docs[each].temperature);
-          temp.text.push(dataSingle.docs[each].temperature);
-          hum.x.push(time);
-          hum.y.push(dataSingle.docs[each].humidity);
-          hum.text.push(dataSingle.docs[each].humidity);
-        }
-
-        // console.log(temp)
-
-        //reverse arrays so the last 10 records are in ascending order.
-        temp.x.reverse();
-        temp.y.reverse();
-        temp.text.reverse();
-        hum.x.reverse();
-        hum.y.reverse();
-        hum.text.reverse();
-
-        //chart data
-        const tempChartData = [temp];
-        const humChartData = [hum];
-
-        //chart layout
-        let layout = {
-          // title: 'Temperature & Humidity',
-          autosize: true,
-          showlegend: false,
-          legend: {
-            // "orientation": "h",
-            x: 0,
-            y: 100
-          },
-          margin: {
-            t: 10,
-            b: 60,
-            l: 10,
-            r: 10,
-            pad: 0
-          },
-          xaxis: {
-            // title: 'AXIS TITLE',
-            // titlefont{},
-            tickangle: 45,
-            tickfont: {
-              family: "Arial, sans-serif",
-              size: 9,
-              color: "black"
+          //create temp and hum objects for chart data
+          //Temperature
+          let temp = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
             },
-            showgrid: false
-          },
-          yaxis: {
-            // title: 'AXIS TITLE',
-            tickangle: 0,
-            tickfont: {
-              family: "Arial, sans-serif",
-              size: 9,
-              color: "black"
+            mode: "lines+text",
+            type: "scatter",
+            name: "temp",
+            line: {
+              color: "rgb(253, 180, 75)"
             },
-            showgrid: false,
-            showticklabels: false
+            hoverinfo: "x+y"
+            // marker: { size: 12 }
+          };
+
+          //Humidity
+          let hum = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
+            },
+            mode: "lines+text",
+            // textposition: 'top center',
+            type: "scatter",
+            name: "hum",
+            line: {
+              color: "rgb(0, 187, 240)"
+            },
+            hoverinfo: "x+y"
+          };
+
+          //loop data to plot onto graph
+          for (const each in dataSingle.docs) {
+            //convert UTC packet created time to NZ time
+            let time = new Date(dataSingle.docs[each].created);
+            temp.x.push(time);
+            temp.y.push(dataSingle.docs[each].temperature);
+            temp.text.push(dataSingle.docs[each].temperature);
+            hum.x.push(time);
+            hum.y.push(dataSingle.docs[each].humidity);
+            hum.text.push(dataSingle.docs[each].humidity);
           }
-        };
 
-        //update infowindow values for single device
+          // console.log(temp)
 
-        //DEVICE NAME
-        document.getElementById("deviceValue").innerHTML =
-          dataSingle.docs[0].device_name;
-        //LAST ACTIVITY
-        let time = new Date(dataSingle.docs[0].created).toString();
-        document.getElementById("timeValue").innerHTML = time;
-        //TEMPERATURE
-        let roundedTemp = Math.round(dataSingle.docs[0].temperature * 10) / 10;
-        document.getElementById("tempValue").innerHTML =
-          roundedTemp.toFixed(1) + "<sup>&deg;C</sup>";
-        //HUMIDITY
-        document.getElementById("humValue").innerHTML =
-          dataSingle.docs[0].humidity + "<sup>%</sup>";
+          //reverse arrays so the last 10 records are in ascending order.
+          temp.x.reverse();
+          temp.y.reverse();
+          temp.text.reverse();
+          hum.x.reverse();
+          hum.y.reverse();
+          hum.text.reverse();
 
-        //load graphs
-        Plotly.newPlot("tempGraph", tempChartData, layout, {
-          displayModeBar: false
-        });
-        Plotly.newPlot("humGraph", humChartData, layout, {
-          displayModeBar: false
-        });
+          //chart data
+          const tempChartData = [temp];
+          const humChartData = [hum];
+
+          //chart layout
+          let layout = {
+            // title: 'Temperature & Humidity',
+            autosize: true,
+            showlegend: false,
+            legend: {
+              // "orientation": "h",
+              x: 0,
+              y: 100
+            },
+            margin: {
+              t: 10,
+              b: 60,
+              l: 10,
+              r: 10,
+              pad: 0
+            },
+            xaxis: {
+              // title: 'AXIS TITLE',
+              // titlefont{},
+              tickangle: 45,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false
+            },
+            yaxis: {
+              // title: 'AXIS TITLE',
+              tickangle: 0,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false,
+              showticklabels: false
+            }
+          };
+
+          //update infowindow values for single device
+
+          activeDataWindow.innerHTML = `
+          <div class="deviceDataLabel" id="tempLabel">Temperature</div>
+          <div class="deviceDataReading" id="tempValue">${(Math.round(dataSingle.docs[0].temperature * 10) / 10).toFixed(1)}<sup>&deg;C</sup></div>
+  
+          <div class="deviceDataLabel" id="humLabel">Humidity</div>
+          <div class="deviceDataReading" id="humValue">${dataSingle.docs[0].humidity}<sup>%</sup></div>
+  
+          <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+  
+          <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+  
+          <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
+          <div class="graph deviceDataLabel" id="activeTemperatureGraph"></div>
+  
+          <div class="deviceDataLabel" id="humHistoryLabel">Hum History</div>
+          <div class="graph deviceDataLabel" id="activeHumidityGraph"></div>
+          `;
+
+          //load graphs
+          Plotly.newPlot("activeTemperatureGraph", tempChartData, layout, {
+            displayModeBar: false
+          });
+          Plotly.newPlot("activeHumidityGraph", humChartData, layout, {
+            displayModeBar: false
+          });
+        } else if (type === DEVICE_TYPE.WF) {
+          //create flow object for chart data
+          //flow
+          let flow = {
+            x: [],
+            y: [],
+            text: [],
+            textposition: "top center",
+            textfont: {
+              size: 9
+            },
+            mode: "lines+text",
+            type: "scatter",
+            name: "flow",
+            line: {
+              color: "rgb(253, 180, 75)"
+            },
+            hoverinfo: "x+y"
+            // marker: { size: 12 }
+          };
+
+          //loop data to plot onto graph
+          for (const each in dataSingle.docs) {
+            //convert UTC packet created time to NZ time
+            let time = new Date(dataSingle.docs[each].created);
+            flow.x.push(time);
+            flow.y.push(dataSingle.docs[each].flow);
+            flow.text.push(dataSingle.docs[each].flow);
+          }
+
+          // console.log(temp)
+
+          //reverse arrays so the last 10 records are in ascending order.
+          flow.x.reverse();
+          flow.y.reverse();
+          flow.text.reverse();
+
+          //chart data
+          const flowChartData = [flow];
+
+          //chart layout
+          let layout = {
+            // title: 'Flow',
+            autosize: true,
+            showlegend: false,
+            legend: {
+              // "orientation": "h",
+              x: 0,
+              y: 100
+            },
+            margin: {
+              t: 10,
+              b: 60,
+              l: 10,
+              r: 10,
+              pad: 0
+            },
+            xaxis: {
+              // title: 'AXIS TITLE',
+              // titlefont{},
+              tickangle: 45,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false
+            },
+            yaxis: {
+              // title: 'AXIS TITLE',
+              tickangle: 0,
+              tickfont: {
+                family: "Arial, sans-serif",
+                size: 9,
+                color: "black"
+              },
+              showgrid: false,
+              showticklabels: false
+            }
+          };
+
+          //update infowindow values for single device
+
+          activeDataWindow.innerHTML = `
+          <div class="deviceDataLabel" id="flowLabel">Flow</div>
+          <div class="deviceDataReading" id="flowValue">${(Math.round(dataSingle.docs[0].flow * 10) / 10).toFixed(1)}<sup>&deg;C</sup></div>
+  
+          <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
+          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+  
+          <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+  
+          <div class="deviceDataLabel" id="flowHistoryLabel">Flow History</div>
+          <div class="graph deviceDataLabel" id="activeFlowGraph"></div>
+          `;
+
+          //load graphs
+          Plotly.newPlot("activeFlowGraph", flowChartData, layout, {
+            displayModeBar: false
+          });
+        }
       })
       .catch(err => console.log("Error: ", err));
   });
