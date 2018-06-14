@@ -97,8 +97,14 @@ body {
   border-bottom-left-radius: 5px;
   transition: all 0.5s ease-in-out;
   transform: translateX(100%);
+}
 
-  /* border: 2px solid pink; */
+.slideInInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  /* border: 2px solid red; */
 }
 
 .slideOpen .slideInDiv {
@@ -112,6 +118,10 @@ body {
   flex-direction: column;
   justify-content: center;
   align-items: center;
+
+  margin-top: 3em;
+
+  /* border: 2px solid pink; */
 }
 
 .flexLeft,
@@ -230,29 +240,13 @@ body {
   grid-template-areas:
     "deviceLabel timeLabel"
     "deviceValue timeValue"
-    "tempLabel humLabel"
-    "tempValue humValue"
-    "tempHistoryLabel humHistoryLabel"
-    "tempGraph humGraph";
+    "data1Label data2Label"
+    "data1Value data2Value"
+    "data1HistoryLabel data2HistoryLabel"
+    "data1Graph data2Graph";
   z-index: 99;
 }
 
-#tempLabel {
-  grid-area: tempLabel;
-  margin-top: 30px;
-}
-#tempValue {
-  grid-area: tempValue;
-  margin-bottom: 20px;
-}
-#humLabel {
-  grid-area: humLabel;
-  margin-top: 30px;
-}
-#humValue {
-  grid-area: humValue;
-  margin-bottom: 20px;
-}
 #deviceLabel {
   grid-area: deviceLabel;
 }
@@ -266,17 +260,53 @@ body {
   grid-area: timeValue;
 }
 
-#tempHistoryLabel {
-  grid-area: tempHistoryLabel;
+#tempLabel,
+#kilovoltsLabel {
+  grid-area: data1Label;
+  margin-top: 30px;
 }
-#hunHistoryLabel {
-  grid-area: humHistoryLabel;
+#tempValue,
+#kilovoltsValue {
+  grid-area: data1Value;
+  margin-bottom: 20px;
 }
-#tempGraph {
-  grid-area: tempGraph;
+#humLabel,
+#ampsLabel,
+#flowLabel,
+#gateLabel {
+  grid-area: data2Label;
+  margin-top: 30px;
 }
-#humGraph {
-  grid-area: humGraph;
+#humValue,
+#ampsValue,
+#flowValue,
+#gateValue {
+  grid-area: data2Value;
+  margin-bottom: 20px;
+}
+
+#tempHistoryLabel,
+#kilovoltsHistoryLabel {
+  grid-area: data1HistoryLabel;
+}
+
+#humHistoryLabel,
+#ampsHistoryLabel,
+#flowHistoryLabel,
+#gateHistoryLabel {
+  grid-area: data2HistoryLabel;
+}
+
+#activeTemperatureGraph,
+#activeKilovoltsGraph {
+  grid-area: data1Graph;
+}
+
+#activeHumidityGraph,
+#activeAmpsGraph,
+#activeFlowGraph,
+#activeGateGraph {
+  grid-area: data2Graph;
 }
 
 .deviceDataLabel {

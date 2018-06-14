@@ -3,15 +3,21 @@ const DEVICE_TYPE = {
   WF: "WF",
   GT: "GT",
   EF: "EF"
-}
+};
 
 ///////////////////HSL CIRCLE TEST
 function createCircle(thisDevice, latLng) {
-
   // fraction represents where the value sits between the min and max
-  var fraction = (Math.min(thisDevice.circleValue, thisDevice.circleMaxValue) - thisDevice.circleMinValue) / (thisDevice.circleMaxValue - thisDevice.circleMinValue);
+  var fraction =
+    (Math.min(thisDevice.circleValue, thisDevice.circleMaxValue) -
+      thisDevice.circleMinValue) /
+    (thisDevice.circleMaxValue - thisDevice.circleMinValue);
 
-  var color = interpolateRgb(thisDevice.circleMinColor, thisDevice.circleMaxColor, fraction);
+  var color = interpolateRgb(
+    thisDevice.circleMinColor,
+    thisDevice.circleMaxColor,
+    fraction
+  );
 
   var circle = new google.maps.Circle({
     strokeWeight: 0.5,
@@ -94,7 +100,7 @@ function isDeviceLive(liveDevices, type, nameKey, myArray) {
       circleMinValue: 0.0,
       circleMaxColor: [0, 0, 0],
       circleMinColor: [255, 51, 51],
-      circleValue: 0,
+      circleValue: 0
     };
   } else {
     const latestData = data.sort((a, b) => a.created > b.created)[0];
@@ -111,7 +117,7 @@ function isDeviceLive(liveDevices, type, nameKey, myArray) {
           circleMinColor: [255, 51, 51],
           circleValue: temperature,
           temperature: temperature,
-          humidity: humidity,
+          humidity: humidity
         };
       case DEVICE_TYPE.WF:
         const flow = Number(latestData.flow).toFixed(2);
@@ -147,11 +153,10 @@ function isDeviceLive(liveDevices, type, nameKey, myArray) {
           circleMinValue: 0.0,
           circleMaxColor: [255, 51, 51],
           circleMinColor: [124, 252, 0],
-          circleValue: (latestData.gate === "Open") ? 1.0 : 0.0,
+          circleValue: latestData.gate === "Open" ? 1.0 : 0.0,
           gate: latestData.gate
         };
     }
-
   }
 }
 
@@ -173,7 +178,8 @@ function createMarkerForDevice(type, latLng, name, markerData) {
     map: map,
     // icon: 'http://www.ioa.co.nz/img/'+ colour +'.png',
     icon: {
-      path: "M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z",
+      path:
+        "M 0,0 C -2,-20 -10,-22 -10,-30 A 10,10 0 1,1 10,-30 C 10,-22 2,-20 0,0 z",
       fillColor: markerData.markerColour,
       fillOpacity: 1,
       strokeColor: "#000",
@@ -190,7 +196,7 @@ function createMarkerForDevice(type, latLng, name, markerData) {
   markers.push(marker);
 
   //add infoWindow Event
-  marker.addListener("click", function () {
+  marker.addListener("click", function() {
     //close any open info windows
     closeAllInfoWindows(map);
     //open new infowindow
@@ -210,7 +216,7 @@ function createMarkerForDevice(type, latLng, name, markerData) {
 
 // Hide all markers function
 function closeAllInfoWindows(map) {
-  markers.forEach(function (marker) {
+  markers.forEach(function(marker) {
     marker.infowindow.close(map, marker);
   });
 }
@@ -226,7 +232,8 @@ function populateGraph(deviceName, type) {
     method: "POST",
     crossDomain: true,
     headers: {
-      Authorization: "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
+      Authorization:
+        "Basic d2FyZGVydWNjZXBvb2RpdHNpcmVsdGFiOjI1MDBmYTYyYzM2NDI2ZDA5ZTY4ZjFkNjkwMWM1YmI0MzNjMTc2NTQ=",
       "content-type": "application/json"
     },
     body: JSON.stringify({
@@ -244,17 +251,19 @@ function populateGraph(deviceName, type) {
         "amps",
         "kilovolts",
         "flow",
-        "status",
+        "status"
       ],
-      sort: [{
-        created: "desc" //get the most recent records for this device
-      }],
+      sort: [
+        {
+          created: "desc" //get the most recent records for this device
+        }
+      ],
       limit: 10 //limit this to the 10 most recent records
     })
   };
 
   const activeDataWindow = document.getElementById("activeDataWindow");
-  activeDataWindow.innerHTML = `<h3>Loading your shit...</h3>`
+  activeDataWindow.innerHTML = `<h3>Loading...</h3>`;
 
   //get single device data
   const singleDeviceDataPromise = new Promise(resolve => {
@@ -266,7 +275,6 @@ function populateGraph(deviceName, type) {
         console.log(dataSingle);
 
         if (type === DEVICE_TYPE.THS) {
-
           //create temp and hum objects for chart data
           //Temperature
           let temp = {
@@ -377,16 +385,24 @@ function populateGraph(deviceName, type) {
 
           activeDataWindow.innerHTML = `
           <div class="deviceDataLabel" id="tempLabel">Temperature</div>
-          <div class="deviceDataReading" id="tempValue">${(Math.round(dataSingle.docs[0].temperature * 10) / 10).toFixed(1)}<sup>&deg;C</sup></div>
+          <div class="deviceDataReading" id="tempValue">${(
+            Math.round(dataSingle.docs[0].temperature * 10) / 10
+          ).toFixed(1)}<sup>&deg;C</sup></div>
   
           <div class="deviceDataLabel" id="humLabel">Humidity</div>
-          <div class="deviceDataReading" id="humValue">${dataSingle.docs[0].humidity}<sup>%</sup></div>
+          <div class="deviceDataReading" id="humValue">${
+            dataSingle.docs[0].humidity
+          }<sup>%</sup></div>
   
           <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+          <div class="deviceDataValue" id="deviceValue">${
+            dataSingle.docs[0].device_name
+          }</div>
   
           <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(
+            dataSingle.docs[0].created
+          ).toString()}</div>
   
           <div class="deviceDataLabel" id="tempHistoryLabel">Temp History</div>
           <div class="graph deviceDataLabel" id="activeTemperatureGraph"></div>
@@ -487,13 +503,19 @@ function populateGraph(deviceName, type) {
 
           activeDataWindow.innerHTML = `
           <div class="deviceDataLabel" id="flowLabel">Flow</div>
-          <div class="deviceDataReading" id="flowValue">${(Math.round(dataSingle.docs[0].flow * 10) / 10).toFixed(1)}<sup>&deg;C</sup></div>
+          <div class="deviceDataReading" id="flowValue">${(
+            Math.round(dataSingle.docs[0].flow * 10) / 10
+          ).toFixed(1)}<sup>Lpm</sup></div>
   
           <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+          <div class="deviceDataValue" id="deviceValue">${
+            dataSingle.docs[0].device_name
+          }</div>
   
           <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(
+            dataSingle.docs[0].created
+          ).toString()}</div>
   
           <div class="deviceDataLabel" id="flowHistoryLabel">Flow History</div>
           <div class="graph deviceDataLabel" id="activeFlowGraph"></div>
@@ -504,7 +526,6 @@ function populateGraph(deviceName, type) {
             displayModeBar: false
           });
         } else if (type === DEVICE_TYPE.EF) {
-
           //create kilovolts and amps objects for chart data
           //Kilovolts
           let kilovolts = {
@@ -615,16 +636,24 @@ function populateGraph(deviceName, type) {
 
           activeDataWindow.innerHTML = `
           <div class="deviceDataLabel" id="kilovoltsLabel">Kilovolts</div>
-          <div class="deviceDataReading" id="kilovoltsValue">${(Math.round(dataSingle.docs[0].kilovolts * 10) / 10).toFixed(1)}<sup>kV</sup></div>
+          <div class="deviceDataReading" id="kilovoltsValue">${(
+            Math.round(dataSingle.docs[0].kilovolts * 10) / 10
+          ).toFixed(1)}<sup>kV</sup></div>
   
-          <div class="deviceDataLabel" id="ampsLabel">Humidity</div>
-          <div class="deviceDataReading" id="ampsValue">${dataSingle.docs[0].amps}<sup>A</sup></div>
+          <div class="deviceDataLabel" id="ampsLabel">Amperage</div>
+          <div class="deviceDataReading" id="ampsValue">${
+            dataSingle.docs[0].amps
+          }<sup>A</sup></div>
   
           <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+          <div class="deviceDataValue" id="deviceValue">${
+            dataSingle.docs[0].device_name
+          }</div>
   
           <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(
+            dataSingle.docs[0].created
+          ).toString()}</div>
   
           <div class="deviceDataLabel" id="kilovoltsHistoryLabel">kilovolts History</div>
           <div class="graph deviceDataLabel" id="activeKilovoltsGraph"></div>
@@ -725,13 +754,19 @@ function populateGraph(deviceName, type) {
 
           activeDataWindow.innerHTML = `
           <div class="deviceDataLabel" id="gateLabel">Gate</div>
-          <div class="deviceDataReading" id="gateValue">${dataSingle.docs[0].status}</div>
+          <div class="deviceDataReading" id="gateValue">${
+            dataSingle.docs[0].status
+          }</div>
   
           <div class="deviceDataLabel" id="deviceLabel">Device Name</div>
-          <div class="deviceDataValue" id="deviceValue">${dataSingle.docs[0].device_name}</div>
+          <div class="deviceDataValue" id="deviceValue">${
+            dataSingle.docs[0].device_name
+          }</div>
   
           <div class="deviceDataLabel" id="timeLabel">Last Activity</div>
-          <div class="deviceDataValue" id="timeValue">${new Date(dataSingle.docs[0].created).toString()}</div>
+          <div class="deviceDataValue" id="timeValue">${new Date(
+            dataSingle.docs[0].created
+          ).toString()}</div>
   
           <div class="deviceDataLabel" id="gateHistoryLabel">Gate History</div>
           <div class="graph deviceDataLabel" id="activeGateGraph"></div>
