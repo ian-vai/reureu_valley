@@ -21,6 +21,3 @@ function initMap() {
 
 //update dashboard every 5mins (aka 300000 milliseconds)
 window.setInterval(initDataForMap, 300000);
-
-var markers = [];
-var circles = [];

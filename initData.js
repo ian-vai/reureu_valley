@@ -1,3 +1,6 @@
+var markers = [];
+var circles = [];
+
 function initDataForMap() {
   markers.forEach(function(marker) {
     marker.setMap(null);
