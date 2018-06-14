@@ -76,9 +76,9 @@ function computeRecentDevices(recentDevices) {
   //return object to computedTempHum = {}
   return {
     averageTemp: avgTemps.toFixed(1),
-    medianTemp: medianTemps,
+    medianTemp: medianTemps.toFixed(1),
     averageHum: avgHums.toFixed(1),
-    medianHum: medianHums
+    medianHum: medianHums.toFixed(1)
   };
 }
 
